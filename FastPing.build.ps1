@@ -79,8 +79,6 @@ Enter-Build {
     $ProgressPreference = 'SilentlyContinue'
     $Global:ProgressPreference = 'SilentlyContinue'
 
-    Get-ChildItem -Path 'ENV:' | Out-String
-
     Write-Host '  Build Environment: Ready' -ForegroundColor Green
     Write-Host ''
 }

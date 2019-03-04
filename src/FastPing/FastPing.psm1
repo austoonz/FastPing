@@ -8,6 +8,11 @@ if (Test-Path -Path "$PSScriptRoot\Constants.ps1")
     . $PSScriptRoot\Constants.ps1
 }
 
+if (Test-Path -Path "$PSScriptRoot\Classes.ps1")
+{
+    . $PSScriptRoot\Classes.ps1
+}
+
 foreach ($path in $paths)
 {
     if (Test-Path -Path "$PSScriptRoot\$path")

@@ -99,5 +99,23 @@ Describe -Name $ModuleName -Fixture {
                 $assertion.Count | Should -BeExactly $Count
             }
         }
+
+        Context -Name 'TimedOut Tests' -Fixture {
+            $testCases = @(
+                @{
+                    # As at 2019-03-03, microsoft.com does not respond to echo requests
+                    HostName = 'microsoft.com'
+                    Timeout = 500
+                    Expected = 'TimedOut'
+                }
+            )
+
+            It -Name 'Returned <Expected> status' -TestCases $testCases -Test {
+                param ($HostName, $Timeout, $Expected)
+
+                $assertion = Invoke-FastPing -HostName $HostName -Timeout $Timeout
+                $assertion.Status | Should -BeExactly $Expected
+            }
+        }
     }
 }

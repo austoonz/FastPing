@@ -7,13 +7,18 @@
     a series of asynchronous pings against a set of target hosts.
 
     .PARAMETER HostName
-    A string array of target hosts.
+    String array of target hosts.
 
     .PARAMETER Count
-    The number of echo requests to send.
+    Number of echo requests to send. Aliased with 'n', like ping.exe.
+
+    .PARAMETER Timeout
+    Timeout in milliseconds to wait for each reply. Defaults to 2 seconds (5000). Aliased with 'w', like ping.exe.
+
+    Per MSDN Documentation, "When specifying very small numbers for timeout, the Ping reply can be received even if timeout milliseconds have elapsed." (https://msdn.microsoft.com/en-us/library/ms144955.aspx).
 
     .PARAMETER RoundtripAveragePingCount
-    The number of echo requests to send for calculating the Roundtrip average. Defaults to 4.
+    Number of echo requests to send for calculating the Roundtrip average. Defaults to 4.
 
     .EXAMPLE
     Invoke-FastPing -HostName 'andrewpearce.io'
@@ -29,6 +34,26 @@
     --------                     ---------------- ------
     doesnotexist.andrewpearce.io                   False
     andrewpearce.io              22                 True
+
+    .EXAMPLE
+    Invoke-FastPing -HostName 'andrewpearce.io' -Count 5
+
+    This example pings the host 'andrewpearce.io' five times.
+
+    .EXAMPLE
+    fp andrewpearce.io -n 5
+
+    This example pings the host 'andrewpearce.io' five times using syntax similar to ping.exe.
+
+    .EXAMPLE
+    Invoke-FastPing -HostName 'microsoft.com' -Timeout 500
+
+    This example pings the host 'microsoft.com' with a 500 millisecond timeout.
+
+    .EXAMPLE
+    fp microsoft.com -w 500
+
+    This example pings the host 'microsoft.com' with a 500 millisecond timeout using syntax similar to ping.exe.
 #>
 function Invoke-FastPing
 {
@@ -44,13 +69,17 @@ function Invoke-FastPing
         [Alias('N')]
         [Int] $Count = 1,
 
+        [ValidateRange(1, [Int]::MaxValue)]
+        [Alias('W')]
+        [Int] $Timeout = 5000,
+
         [Int] $RoundtripAveragePingCount = 4
     )
 
     begin
     {
+        $asyncWaitMilliseconds = 500
         $loopCounter = 0
-        $internalWaitTimeMilliseconds = 500
     }
 
     process
@@ -75,7 +104,7 @@ function Invoke-FastPing
                     $object = @{
                         Host  = $hn
                         Ping  = $ping
-                        Async = $ping.SendPingAsync($hn)
+                        Async = $ping.SendPingAsync($hn, $Timeout)
                     }
                     $queue.Enqueue($object)
                 }
@@ -89,30 +118,31 @@ function Invoke-FastPing
                 try
                 {
                     # Wait for completion
-                    if ($object.Async.Wait($internalWaitTimeMilliseconds) -eq $true)
+                    if ($object.Async.Wait($asyncWaitMilliseconds) -eq $true)
                     {
                         [Void]$pingHash[$object.Host].Add(@{
                                 Host          = $object.Host
                                 RoundtripTime = $object.Async.Result.RoundtripTime
-                                Status        = $object.Async.Status
+                                Status        = $object.Async.Result.Status
                             })
                         continue
                     }
                 }
                 catch
                 {
+                    # The Wait() method can throw an exception if the host does not exist.
                     if ($object.Async.IsCompleted -eq $true)
                     {
                         [Void]$pingHash[$object.Host].Add(@{
                                 Host          = $object.Host
                                 RoundtripTime = $object.Async.Result.RoundtripTime
-                                Status        = $object.Async.Status
+                                Status        = $object.Async.Result.Status
                             })
                         continue
                     }
                     else
                     {
-                        Write-Warning -Message $_.Exception.Message
+                        Write-Warning -Message ('Unhandled exception: {0}' -f $_.Exception.Message)
                     }
                 }
 
@@ -122,13 +152,22 @@ function Invoke-FastPing
             # Using the ping results in pingHash, calculate the average RoundtripTime
             foreach ($key in $pingHash.Keys)
             {
-                if (($pingHash.$key.Status | Select-Object -Unique) -eq 'RanToCompletion')
+                $pingStatus = $pingHash.$key.Status | Select-Object -Unique
+
+                if ($pingStatus -eq [System.Net.NetworkInformation.IPStatus]::Success)
                 {
                     $online = $true
+                    $status = [System.Net.NetworkInformation.IPStatus]::Success
+                }
+                elseif ($pingStatus.Count -eq 1)
+                {
+                    $online = $false
+                    $status = $pingStatus
                 }
                 else
                 {
                     $online = $false
+                    $status = [System.Net.NetworkInformation.IPStatus]::Unknown
                 }
 
                 if ($online -eq $true)
@@ -142,10 +181,10 @@ function Invoke-FastPing
                         }
                     }
 
-                    $average = $latency | Measure-Object -Average
-                    if ($average.Average)
+                    $average = ($latency | Measure-Object -Average).Average
+                    if ($average)
                     {
-                        $roundtripAverage = [Math]::Round($average.Average, 0)
+                        $roundtripAverage = [Math]::Round($average, 0)
                     }
                     else
                     {
@@ -157,11 +196,12 @@ function Invoke-FastPing
                     $roundtripAverage = $null
                 }
 
-                [PSCustomObject]@{
-                    HostName         = $key
-                    RoundtripAverage = $roundtripAverage
-                    Online           = $online
-                }
+                [FastPingResponse]::new(
+                    $key,
+                    $roundtripAverage,
+                    $online,
+                    $status
+                )
             } # End result processing
 
             # Increment the loop counter
