@@ -111,7 +111,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'https://github.com/austoonz/FastPing/releases/tag/v0.1.0'
+            ReleaseNotes = 'https://github.com/austoonz/FastPing/blob/master/CHANGELOG.md'
 
         } # End of PSData hashtable
 
