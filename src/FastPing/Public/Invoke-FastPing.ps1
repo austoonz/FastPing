@@ -7,13 +7,13 @@
     a series of asynchronous pings against a set of target hosts.
 
     .PARAMETER HostName
-    A string array of target hosts to ping.
+    A string array of target hosts.
+
+    .PARAMETER Count
+    The number of echo requests to send.
 
     .PARAMETER RoundtripAveragePingCount
-    The number of pings to send against each host for calculating the Roundtrip average. Defaults to 4.
-
-    .PARAMETER WaitTimeMilliseconds
-    The time in milliseconds to wait for each ping to complete. Defaults to 500.
+    The number of echo requests to send for calculating the Roundtrip average. Defaults to 4.
 
     .EXAMPLE
     Invoke-FastPing -HostName 'andrewpearce.io'
@@ -40,119 +40,133 @@ function Invoke-FastPing
         [Alias('Computer', 'ComputerName', 'Host')]
         [String[]] $HostName,
 
-        [Int] $RoundtripAveragePingCount = 4,
+        [ValidateRange(1, [Int]::MaxValue)]
+        [Alias('N')]
+        [Int] $Count = 1,
 
-        [Int] $WaitTimeMilliseconds = 500
+        [Int] $RoundtripAveragePingCount = 4
     )
+
+    begin
+    {
+        $loopCounter = 0
+        $internalWaitTimeMilliseconds = 500
+    }
 
     process
     {
-        # Objects to hold items as we process pings
-        $queue = [System.Collections.Queue]::new()
-        $pingHash = @{}
-
-        # Start an asynchronous ping against each computer
-        foreach ($hn in $HostName)
+        while ($loopCounter -lt $Count)
         {
-            if ($pingHash.Keys -notcontains $hn)
-            {
-                $pingHash.Add($hn, [System.Collections.ArrayList]::new())
-            }
+            # Objects to hold items as we process pings
+            $queue = [System.Collections.Queue]::new()
+            $pingHash = @{}
 
-            for ($i = 0; $i -lt $RoundtripAveragePingCount; $i++)
+            # Start an asynchronous ping against each computer
+            foreach ($hn in $HostName)
             {
-                $ping = [System.Net.Networkinformation.Ping]::new()
-                $object = @{
-                    Host  = $hn
-                    Ping  = $ping
-                    Async = $ping.SendPingAsync($hn)
+                if ($pingHash.Keys -notcontains $hn)
+                {
+                    $pingHash.Add($hn, [System.Collections.ArrayList]::new())
                 }
-                $queue.Enqueue($object)
-            }
-        }
 
-        # Process the asynchronous pings
-        while ($queue.Count -gt 0)
-        {
-            $object = $queue.Dequeue()
-
-            try
-            {
-                # Wait for completion
-                if ($object.Async.Wait($WaitTimeMilliseconds) -eq $true)
+                for ($i = 0; $i -lt $RoundtripAveragePingCount; $i++)
                 {
-                    [Void]$pingHash[$object.Host].Add(@{
-                            Host          = $object.Host
-                            RoundtripTime = $object.Async.Result.RoundtripTime
-                            Status        = $object.Async.Status
-                        })
-                    continue
-                }
-            }
-            catch
-            {
-                if ($object.Async.IsCompleted -eq $true)
-                {
-                    [Void]$pingHash[$object.Host].Add(@{
-                            Host          = $object.Host
-                            RoundtripTime = $object.Async.Result.RoundtripTime
-                            Status        = $object.Async.Status
-                        })
-                    continue
-                }
-                else
-                {
-                    Write-Warning -Message $_.Exception.Message
+                    $ping = [System.Net.Networkinformation.Ping]::new()
+                    $object = @{
+                        Host  = $hn
+                        Ping  = $ping
+                        Async = $ping.SendPingAsync($hn)
+                    }
+                    $queue.Enqueue($object)
                 }
             }
 
-            $queue.Enqueue($object)
-        }
+            # Process the asynchronous pings
+            while ($queue.Count -gt 0)
+            {
+                $object = $queue.Dequeue()
 
-        # Using the ping results in pingHash, calculate the average RoundtripTime
-        foreach ($key in $pingHash.Keys)
-        {
-            if (($pingHash.$key.Status | Select-Object -Unique) -eq 'RanToCompletion')
-            {
-                $online = $true
-            }
-            else
-            {
-                $online = $false
-            }
-
-            if ($online -eq $true)
-            {
-                $latency = [System.Collections.ArrayList]::new()
-                foreach ($value in $pingHash.$key)
+                try
                 {
-                    if ($value.RoundtripTime)
+                    # Wait for completion
+                    if ($object.Async.Wait($internalWaitTimeMilliseconds) -eq $true)
                     {
-                        [Void]$latency.Add($value.RoundtripTime)
+                        [Void]$pingHash[$object.Host].Add(@{
+                                Host          = $object.Host
+                                RoundtripTime = $object.Async.Result.RoundtripTime
+                                Status        = $object.Async.Status
+                            })
+                        continue
+                    }
+                }
+                catch
+                {
+                    if ($object.Async.IsCompleted -eq $true)
+                    {
+                        [Void]$pingHash[$object.Host].Add(@{
+                                Host          = $object.Host
+                                RoundtripTime = $object.Async.Result.RoundtripTime
+                                Status        = $object.Async.Status
+                            })
+                        continue
+                    }
+                    else
+                    {
+                        Write-Warning -Message $_.Exception.Message
                     }
                 }
 
-                $average = $latency | Measure-Object -Average
-                if ($average.Average)
+                $queue.Enqueue($object)
+            }
+
+            # Using the ping results in pingHash, calculate the average RoundtripTime
+            foreach ($key in $pingHash.Keys)
+            {
+                if (($pingHash.$key.Status | Select-Object -Unique) -eq 'RanToCompletion')
                 {
-                    $roundtripAverage = [Math]::Round($average.Average, 0)
+                    $online = $true
+                }
+                else
+                {
+                    $online = $false
+                }
+
+                if ($online -eq $true)
+                {
+                    $latency = [System.Collections.ArrayList]::new()
+                    foreach ($value in $pingHash.$key)
+                    {
+                        if ($value.RoundtripTime)
+                        {
+                            [Void]$latency.Add($value.RoundtripTime)
+                        }
+                    }
+
+                    $average = $latency | Measure-Object -Average
+                    if ($average.Average)
+                    {
+                        $roundtripAverage = [Math]::Round($average.Average, 0)
+                    }
+                    else
+                    {
+                        $roundtripAverage = $null
+                    }
                 }
                 else
                 {
                     $roundtripAverage = $null
                 }
-            }
-            else
-            {
-                $roundtripAverage = $null
-            }
 
-            [PSCustomObject]@{
-                HostName         = $key
-                RoundtripAverage = $roundtripAverage
-                Online           = $online
-            }
-        } # End result processing
+                [PSCustomObject]@{
+                    HostName         = $key
+                    RoundtripAverage = $roundtripAverage
+                    Online           = $online
+                }
+            } # End result processing
+
+            # Increment the loop counter
+            $loopCounter++
+        }
 
     } # End Process
 }

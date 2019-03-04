@@ -51,7 +51,8 @@ Enter-Build {
     $script:ModuleName = (Split-Path -Path $BuildFile -Leaf).Split('.')[0]
     if (Get-Module -Name $script:ModuleName) { Remove-Module -Name $script:ModuleName }
 
-    $script:ModuleSourcePath = [System.IO.Path]::Combine($BuildRoot, 'src', $script:ModuleName)
+    $script:SourcePath = Join-Path -Path $BuildRoot -ChildPath 'src'
+    $script:ModuleSourcePath = Join-Path -Path $script:SourcePath -ChildPath $script:ModuleName
     $script:ModuleFiles = Join-Path -Path $script:ModuleSourcePath -ChildPath '*'
 
     $script:ModuleManifestFile = Join-Path -Path $script:ModuleSourcePath -ChildPath "$($script:ModuleName).psd1"
@@ -62,7 +63,7 @@ Enter-Build {
     $script:ModuleDescription = $manifestInfo.Description
     $Script:FunctionsToExport = $manifestInfo.FunctionsToExport
 
-    $script:TestsPath = Join-Path -Path $BuildRoot -ChildPath 'Tests'
+    $script:TestsPath = Join-Path -Path $script:SourcePath -ChildPath 'Tests'
     $script:UnitTestsPath = Join-Path -Path $script:TestsPath -ChildPath 'Unit'
     $script:IntegrationTestsPath = Join-Path -Path $script:TestsPath -ChildPath 'Integration'
 
@@ -200,7 +201,7 @@ task Test {
         Write-Host ''
 
         $invokePesterParams = @{
-            Path                         = 'Tests\Unit'
+            Path                         = 'src\Tests\Unit'
             Strict                       = $true
             PassThru                     = $true
             Verbose                      = $false
