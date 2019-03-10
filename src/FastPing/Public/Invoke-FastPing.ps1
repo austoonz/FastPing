@@ -17,6 +17,9 @@
 
     Per MSDN Documentation, "When specifying very small numbers for timeout, the Ping reply can be received even if timeout milliseconds have elapsed." (https://msdn.microsoft.com/en-us/library/ms144955.aspx).
 
+    .PARAMETER Interval
+    Number of milliseconds between echo requests.
+
     .PARAMETER RoundtripAveragePingCount
     Number of echo requests to send for calculating the Roundtrip average. Defaults to 4.
 
@@ -73,139 +76,179 @@ function Invoke-FastPing
         [Alias('W')]
         [Int] $Timeout = 5000,
 
+        [ValidateRange(1, [Int]::MaxValue)]
+        [Int] $Interval = 1000,
+
+        [ValidateRange(1, [Int]::MaxValue)]
         [Int] $RoundtripAveragePingCount = 4
     )
 
     begin
     {
+        # The time used for the ping asyns wait() method
         $asyncWaitMilliseconds = 500
+
+        # Used to control the Count of echo requests
         $loopCounter = 0
+
+        # Used to control the Interval between echo requests
+        $loopTimer = [System.Diagnostics.Stopwatch]::new()
     }
 
     process
     {
-        while ($loopCounter -lt $Count)
+        try
         {
-            # Objects to hold items as we process pings
-            $queue = [System.Collections.Queue]::new()
-            $pingHash = @{}
-
-            # Start an asynchronous ping against each computer
-            foreach ($hn in $HostName)
+            while ($true)
             {
-                if ($pingHash.Keys -notcontains $hn)
-                {
-                    $pingHash.Add($hn, [System.Collections.ArrayList]::new())
-                }
+                $loopTimer.Restart()
 
-                for ($i = 0; $i -lt $RoundtripAveragePingCount; $i++)
-                {
-                    $ping = [System.Net.Networkinformation.Ping]::new()
-                    $object = @{
-                        Host  = $hn
-                        Ping  = $ping
-                        Async = $ping.SendPingAsync($hn, $Timeout)
-                    }
-                    $queue.Enqueue($object)
-                }
-            }
+                # Objects to hold items as we process pings
+                $queue = [System.Collections.Queue]::new()
+                $pingHash = @{}
 
-            # Process the asynchronous pings
-            while ($queue.Count -gt 0)
-            {
-                $object = $queue.Dequeue()
+                # Start an asynchronous ping against each computer
+                foreach ($hn in $HostName)
+                {
+                    if ($pingHash.Keys -notcontains $hn)
+                    {
+                        $pingHash.Add($hn, [System.Collections.ArrayList]::new())
+                    }
 
-                try
-                {
-                    # Wait for completion
-                    if ($object.Async.Wait($asyncWaitMilliseconds) -eq $true)
+                    for ($i = 0; $i -lt $RoundtripAveragePingCount; $i++)
                     {
-                        [Void]$pingHash[$object.Host].Add(@{
-                                Host          = $object.Host
-                                RoundtripTime = $object.Async.Result.RoundtripTime
-                                Status        = $object.Async.Result.Status
-                            })
-                        continue
-                    }
-                }
-                catch
-                {
-                    # The Wait() method can throw an exception if the host does not exist.
-                    if ($object.Async.IsCompleted -eq $true)
-                    {
-                        [Void]$pingHash[$object.Host].Add(@{
-                                Host          = $object.Host
-                                RoundtripTime = $object.Async.Result.RoundtripTime
-                                Status        = $object.Async.Result.Status
-                            })
-                        continue
-                    }
-                    else
-                    {
-                        Write-Warning -Message ('Unhandled exception: {0}' -f $_.Exception.Message)
+                        $ping = [System.Net.Networkinformation.Ping]::new()
+                        $object = @{
+                            Host  = $hn
+                            Ping  = $ping
+                            Async = $ping.SendPingAsync($hn, $Timeout)
+                        }
+                        $queue.Enqueue($object)
                     }
                 }
 
-                $queue.Enqueue($object)
-            }
+                # Process the asynchronous pings
+                while ($queue.Count -gt 0)
+                {
+                    $object = $queue.Dequeue()
 
-            # Using the ping results in pingHash, calculate the average RoundtripTime
-            foreach ($key in $pingHash.Keys)
-            {
-                $pingStatus = $pingHash.$key.Status | Select-Object -Unique
-
-                if ($pingStatus -eq [System.Net.NetworkInformation.IPStatus]::Success)
-                {
-                    $online = $true
-                    $status = [System.Net.NetworkInformation.IPStatus]::Success
-                }
-                elseif ($pingStatus.Count -eq 1)
-                {
-                    $online = $false
-                    $status = $pingStatus
-                }
-                else
-                {
-                    $online = $false
-                    $status = [System.Net.NetworkInformation.IPStatus]::Unknown
-                }
-
-                if ($online -eq $true)
-                {
-                    $latency = [System.Collections.ArrayList]::new()
-                    foreach ($value in $pingHash.$key)
+                    try
                     {
-                        if ($value.RoundtripTime)
+                        # Wait for completion
+                        if ($object.Async.Wait($asyncWaitMilliseconds) -eq $true)
                         {
-                            [Void]$latency.Add($value.RoundtripTime)
+                            [Void]$pingHash[$object.Host].Add(@{
+                                    Host          = $object.Host
+                                    RoundtripTime = $object.Async.Result.RoundtripTime
+                                    Status        = $object.Async.Result.Status
+                                })
+                            continue
+                        }
+                    }
+                    catch
+                    {
+                        # The Wait() method can throw an exception if the host does not exist.
+                        if ($object.Async.IsCompleted -eq $true)
+                        {
+                            [Void]$pingHash[$object.Host].Add(@{
+                                    Host          = $object.Host
+                                    RoundtripTime = $object.Async.Result.RoundtripTime
+                                    Status        = $object.Async.Result.Status
+                                })
+                            continue
+                        }
+                        else
+                        {
+                            Write-Warning -Message ('Unhandled exception: {0}' -f $_.Exception.Message)
                         }
                     }
 
-                    $average = ($latency | Measure-Object -Average).Average
-                    if ($average)
+                    $queue.Enqueue($object)
+                }
+
+                # Using the ping results in pingHash, calculate the average RoundtripTime
+                foreach ($key in $pingHash.Keys)
+                {
+                    $pingStatus = $pingHash.$key.Status | Select-Object -Unique
+
+                    if ($pingStatus -eq [System.Net.NetworkInformation.IPStatus]::Success)
                     {
-                        $roundtripAverage = [Math]::Round($average, 0)
+                        $online = $true
+                        $status = [System.Net.NetworkInformation.IPStatus]::Success
+                    }
+                    elseif ($pingStatus.Count -eq 1)
+                    {
+                        $online = $false
+                        $status = $pingStatus
+                    }
+                    else
+                    {
+                        $online = $false
+                        $status = [System.Net.NetworkInformation.IPStatus]::Unknown
+                    }
+
+                    if ($online -eq $true)
+                    {
+                        $latency = [System.Collections.ArrayList]::new()
+                        foreach ($value in $pingHash.$key)
+                        {
+                            if (-not([String]::IsNullOrWhiteSpace($value.RoundtripTime)))
+                            {
+                                [Void]$latency.Add($value.RoundtripTime)
+                            }
+                        }
+
+                        $measuredLatency = $latency | Measure-Object -Average -Sum
+                        if ($measuredLatency.Average)
+                        {
+                            $roundtripAverage = [Math]::Round($measuredLatency.Average, 0)
+                        }
+                        elseif ($measuredLatency.Sum -eq 0)
+                        {
+                            $roundtripAverage = 0
+                        }
+                        else
+                        {
+                            $roundtripAverage = $null
+                        }
                     }
                     else
                     {
                         $roundtripAverage = $null
                     }
+
+                    [FastPingResponse]::new(
+                        $key,
+                        $roundtripAverage,
+                        $online,
+                        $status
+                    )
+                } # End result processing
+
+                # Increment the loop counter
+                $loopCounter++
+
+                if ($loopCounter -lt $Count)
+                {
+                    $timeToSleep = $Interval - $loopTimer.Elapsed.TotalMilliseconds
+                    if ($timeToSleep -gt 0)
+                    {
+                        Start-Sleep -Milliseconds $timeToSleep
+                    }
                 }
                 else
                 {
-                    $roundtripAverage = $null
+                    break
                 }
-
-                [FastPingResponse]::new(
-                    $key,
-                    $roundtripAverage,
-                    $online,
-                    $status
-                )
-            } # End result processing
-
-            # Increment the loop counter
-            $loopCounter++
+            }
+        }
+        catch
+        {
+            throw
+        }
+        finally
+        {
+            $loopTimer.Stop()
         }
 
     } # End Process

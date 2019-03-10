@@ -64,6 +64,13 @@ Describe -Name $ModuleName -Fixture {
                 }
             } # End Offline Host Tests
 
+            Context -Name 'RoundTripAverage Values' -Fixture {
+                It -Name 'Returns a RoundTripAverage of zero when the ping is too fast to average' -Test {
+                    $assertion = Invoke-FastPing -HostName '127.0.0.1'
+                    $assertion.RoundTripAverage | Should -BeExactly 0
+                }
+            }
+
             Context -Name 'Accepts an array of HostName values' -Fixture {
                 $assertion = Invoke-FastPing -HostName $onlineHost,$offlineHost
 
@@ -95,7 +102,7 @@ Describe -Name $ModuleName -Fixture {
                 param ($Count)
 
                 $hostName = 'andrewpearce.io'
-                $assertion = Invoke-FastPing -HostName $hostName -Count $Count
+                $assertion = Invoke-FastPing -HostName $hostName -Count $Count -Interval 10
                 $assertion.Count | Should -BeExactly $Count
             }
         }
@@ -113,8 +120,32 @@ Describe -Name $ModuleName -Fixture {
             It -Name 'Returned <Expected> status' -TestCases $testCases -Test {
                 param ($HostName, $Timeout, $Expected)
 
-                $assertion = Invoke-FastPing -HostName $HostName -Timeout $Timeout
+                $assertion = Invoke-FastPing -HostName $HostName -Timeout $Timeout -Interval 10
                 $assertion.Status | Should -BeExactly $Expected
+            }
+        }
+
+        Context -Name 'Interval Tests' -Fixture {
+            $testCases = @(
+                @{
+                    Count = 3
+                    Interval = 50
+                    ExpectedMinimumMilliseconds = 100
+                }
+                @{
+                    Count = 3
+                    Interval = 200
+                    ExpectedMinimumMilliseconds = 400
+                }
+            )
+
+            It -Name 'Execution time greated than <ExpectedMinimumMilliseconds> when Interval is <Interval>' -TestCases $testCases -Test {
+                param ($Count, $Interval, $ExpectedMinimumMilliseconds)
+
+                $timer = [System.Diagnostics.StopWatch]::StartNew()
+                $null = Invoke-FastPing -HostName '127.0.0.1' -Count $count -Interval $Interval
+                $timer.Stop()
+                $timer.Elapsed.TotalMilliseconds | Should -BeGreaterThan $ExpectedMinimumMilliseconds
             }
         }
     }
