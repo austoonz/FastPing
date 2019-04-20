@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.0 - 2019-04-20
+
+### Invoke-FastPing Updates
+- Added `-Continuous` Parameter
+- Added ParameterSet options for `-Count` or `-Continuous`
+
+### Invoke-Build Updates
+- Updated Desktop edition to support either AWSPowerShell or AWSPowerShell.NetCore
+- Bumped required module versions for InvokeBuild, Pester, PlatyPS and PSScriptAnalyzer
+
 ## v0.3.0 - 2019-03-09
 
 ### Invoke-FastPing Updates
