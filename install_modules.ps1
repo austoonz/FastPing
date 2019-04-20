@@ -14,25 +14,25 @@ $tempPath = [System.IO.Path]::GetTempPath()
 $modulesToInstall = [System.Collections.ArrayList]::new()
 $null = $modulesToInstall.Add(([PSCustomObject]@{
     ModuleName    = 'InvokeBuild'
-    ModuleVersion = '5.4.3'
+    ModuleVersion = '5.5.1'
     BucketName    = 'austoonz-modules'
     KeyPrefix     = ''
 }))
 $null = $modulesToInstall.Add(([PSCustomObject]@{
     ModuleName    = 'Pester'
-    ModuleVersion = '4.6.0'
+    ModuleVersion = '4.7.3'
     BucketName    = 'austoonz-modules'
     KeyPrefix     = ''
 }))
 $null = $modulesToInstall.Add(([PSCustomObject]@{
     ModuleName    = 'platyPS'
-    ModuleVersion = '0.12.0'
+    ModuleVersion = '0.14.0'
     BucketName    = 'austoonz-modules'
     KeyPrefix     = ''
 }))
 $null = $modulesToInstall.Add(([PSCustomObject]@{
     ModuleName    = 'PSScriptAnalyzer'
-    ModuleVersion = '1.17.1'
+    ModuleVersion = '1.18.0'
     BucketName    = 'austoonz-modules'
     KeyPrefix     = ''
 }))
