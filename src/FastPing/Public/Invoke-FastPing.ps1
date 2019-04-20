@@ -57,20 +57,36 @@
     fp microsoft.com -w 500
 
     This example pings the host 'microsoft.com' with a 500 millisecond timeout using syntax similar to ping.exe.
+
+    .EXAMPLE
+    fp andrewpearce.io -Continuous
+
+    This example pings the host 'andrewpearce.io' continuously until CTRL+C is used.
+
+    .EXAMPLE
+    fp andrewpearce.io -t
+
+    This example pings the host 'andrewpearce.io' continuously until CTRL+C is used.
 #>
 function Invoke-FastPing
 {
-    [alias('FastPing', 'fping', 'fp')]
+    [CmdletBinding(DefaultParameterSetName='Count')]
+    [Alias('FastPing', 'fping', 'fp')]
     param
     (
-        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [ValidateNotNullOrEmpty()]
         [Alias('Computer', 'ComputerName', 'Host')]
         [String[]] $HostName,
 
+        [Parameter(ParameterSetName='Count')]
         [ValidateRange(1, [Int]::MaxValue)]
         [Alias('N')]
         [Int] $Count = 1,
+
+        [Parameter(ParameterSetName='Continuous')]
+        [Alias('T')]
+        [Switch] $Continuous,
 
         [ValidateRange(1, [Int]::MaxValue)]
         [Alias('W')]
@@ -228,7 +244,7 @@ function Invoke-FastPing
                 # Increment the loop counter
                 $loopCounter++
 
-                if ($loopCounter -lt $Count)
+                if ($loopCounter -lt $Count -or $Continuous -eq $true)
                 {
                     $timeToSleep = $Interval - $loopTimer.Elapsed.TotalMilliseconds
                     if ($timeToSleep -gt 0)
