@@ -11,44 +11,43 @@ $VerbosePreference = 'SilentlyContinue'
 $tempPath = [System.IO.Path]::GetTempPath()
 
 # List of PowerShell Modules required for the build
-$modulesToInstall = [System.Collections.ArrayList]::new()
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'InvokeBuild'
-    ModuleVersion = '5.5.1'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'Pester'
-    ModuleVersion = '4.7.3'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'platyPS'
-    ModuleVersion = '0.14.0'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'PSScriptAnalyzer'
-    ModuleVersion = '1.18.0'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
+$modulesToInstall = @(
+    [PSCustomObject]@{
+        ModuleName    = 'AWSPowerShell.NetCore'
+        ModuleVersion = '3.3.498.0'
+        BucketName    = 'austoonz-modules'
+        KeyPrefix     = ''
+    }
+    [PSCustomObject]@{
+        ModuleName    = 'InvokeBuild'
+        ModuleVersion = '5.5.1'
+        BucketName    = 'austoonz-modules'
+        KeyPrefix     = ''
+    }
+    [PSCustomObject]@{
+        ModuleName    = 'Pester'
+        ModuleVersion = '4.7.3'
+        BucketName    = 'austoonz-modules'
+        KeyPrefix     = ''
+    }
+    [PSCustomObject]@{
+        ModuleName    = 'platyPS'
+        ModuleVersion = '0.14.0'
+        BucketName    = 'austoonz-modules'
+        KeyPrefix     = ''
+    }
+    [PSCustomObject]@{
+        ModuleName    = 'PSScriptAnalyzer'
+        ModuleVersion = '1.18.0'
+        BucketName    = 'austoonz-modules'
+        KeyPrefix     = ''
+    }
+)
 
 if ($PSEdition -eq 'Desktop')
 {
     'Environment: Windows PowerShell'
     $moduleInstallPath = [System.IO.Path]::Combine($env:ProgramFiles, 'WindowsPowerShell', 'Modules')
-
-    # Add the AWSPowerShell Module
-    $null = $modulesToInstall.Add(([PSCustomObject]@{
-        ModuleName    = 'AWSPowerShell'
-        ModuleVersion = '3.3.450.0'
-        BucketName    = 'austoonz-modules'
-        KeyPrefix     = ''
-    }))
 }
 else
 {
@@ -56,27 +55,11 @@ else
     {
         'Environment: PowerShell Core on Windows'
         $moduleInstallPath = [System.IO.Path]::Combine($env:ProgramFiles, 'PowerShell', 'Modules')
-
-        # Add the AWSPowerShell.NetCore Module
-        $null = $modulesToInstall.Add(([PSCustomObject]@{
-            ModuleName    = 'AWSPowerShell.NetCore'
-            ModuleVersion = '3.3.450.0'
-            BucketName    = 'austoonz-modules'
-            KeyPrefix     = ''
-        }))
     }
     elseif ($PSVersionTable.Platform -eq 'Unix')
     {
         'Environment: Unix'
         $moduleInstallPath = [System.IO.Path]::Combine('/', 'usr', 'local', 'share', 'powershell', 'Modules')
-
-        # Add the AWSPowerShell.NetCore Module
-        $null = $modulesToInstall.Add(([PSCustomObject]@{
-            ModuleName    = 'AWSPowerShell.NetCore'
-            ModuleVersion = '3.3.450.0'
-            BucketName    = 'austoonz-modules'
-            KeyPrefix     = ''
-        }))
     }
     else
     {
