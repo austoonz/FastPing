@@ -4,25 +4,17 @@ phases:
 
   install:
     commands:
-      # Configure AWS Credentials
       - powershell -command '.\configure_aws_credential.ps1'
-
-      # Install PowerShell Modules for Windows PowerShell
       - powershell -command '.\install_modules.ps1'
 
-      # Download and Install PowerShell core
-      - aws s3 cp s3://austoonz-software/PowerShell-6.1.3-win-x64.msi PowerShell-6.1.3-win-x64.msi --quiet
-      - powershell -command "Start-Process .\PowerShell-6.1.3-win-x64.msi -ArgumentList '/qn /norestart' -Wait"
-
-      # Install PowerShell Modules for PowerShell Core
+      # Install PowerShell Core
+      - aws s3 cp s3://austoonz-software/PowerShell-6.2.0-win-x64.msi PowerShell-6.2.0-win-x64.msi --quiet
+      - powershell -command "Start-Process .\PowerShell-6.2.0-win-x64.msi -ArgumentList '/qn /norestart' -Wait"
       - '& "C:\Program Files\PowerShell\6\pwsh.exe" -command ''.\install_modules.ps1'''
 
   build:
     commands:
-      # Run the build in Windows PowerShell
       - powershell -command 'Invoke-Build'
-
-      # Run the build in PowerShell Core
       - '& "C:\Program Files\PowerShell\6\pwsh.exe" -command ''Invoke-Build'''
 
 artifacts:
