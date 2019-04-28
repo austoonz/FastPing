@@ -1,5 +1,6 @@
 Archive
 Artifacts
 DeploymentArtifacts
+.DS_Store
 .vscode
 cov.xml
