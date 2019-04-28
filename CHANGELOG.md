@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.1 - 2019-04-27
+
+### Invoke-FastPing Updates
+- Added Help for `-Continuous` Parameter
+
+### Manifest Updates
+- Updated CompatiblePSEditions
+- Added PrivateData Tags to indicate platform compatibility
+
 ## v0.4.0 - 2019-04-20
 
 ### Invoke-FastPing Updates

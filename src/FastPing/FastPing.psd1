@@ -12,10 +12,13 @@
     RootModule        = 'FastPing.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.4.0'
+    ModuleVersion     = '0.4.1'
 
     # Supported PSEditions
-    # CompatiblePSEditions = @()
+    CompatiblePSEditions = @(
+        'Core',
+        'Desktop'
+    )
 
     # ID used to uniquely identify this module
     GUID              = '1c5294b7-20cd-4af0-8cd6-497fc318cd87'
@@ -99,7 +102,7 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @('FastPing', 'Ping')
+            Tags = @('FastPing', 'Ping', 'PSEdition_Core', 'PSEdition_Desktop', 'Windows', 'Linux', 'macOS')
 
             # A URL to the license for this module.
             LicenseUri = 'https://github.com/austoonz/FastPing/blob/master/LICENSE'

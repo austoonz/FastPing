@@ -12,6 +12,9 @@
     .PARAMETER Count
     Number of echo requests to send. Aliased with 'n', like ping.exe.
 
+    .PARAMETER Continuous
+    Enables continuous pings against the target hosts. Stop with CTRL+C. Aliases with 't', like ping.exe.
+
     .PARAMETER Timeout
     Timeout in milliseconds to wait for each reply. Defaults to 2 seconds (5000). Aliased with 'w', like ping.exe.
 
@@ -101,7 +104,7 @@ function Invoke-FastPing
 
     begin
     {
-        # The time used for the ping asyns wait() method
+        # The time used for the ping async wait() method
         $asyncWaitMilliseconds = 500
 
         # Used to control the Count of echo requests
