@@ -38,6 +38,8 @@ Install-Module -Name 'FastPing' -Scope 'CurrentUser'
 
 ## Quick Start
 
+### Invoke-FastPing
+
 ```powershell
 # Ping 1.1.1.1 using the function name
 Invoke-FastPing -HostName '1.1.1.1'
@@ -52,6 +54,19 @@ fp 1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4
 fp 1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4 -PingCount 50
 ```
 
+### Invoke-PingSweep
+
+```powershell
+# Ping a range of IP Addresses using the function name
+Invoke-PingSweep -StartIP '1.1.1.1' -EndIP '1.1.1.5'
+
+# Ping a range of IP Addresses using the psweep alias
+psweep -StartIP '1.1.1.1' -EndIP '1.1.1.5'
+
+# Ping a range of IP Addresses using the psweep alias and subnet calculations
+psweep -IPAddress '1.1.1.1' -SubnetMask '255.255.255.252'
+```
+
 ## Author
 
 [Andrew Pearce](https://twitter.com/austoonz) - [https://andrewpearce.io](https://andrewpearce.io)
@@ -59,3 +74,4 @@ fp 1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4 -PingCount 50
 ## Contributors
 
 [Jake Morrison](https://twitter.com/JakeMorrison) - CI/CD standardization work
+[Chris Dent](http://www.indented.co.uk/) - Network Calculation PowerShell code from the [Indented.Net.IP](https://www.powershellgallery.com/packages/Indented.Net.IP/) PowerShel Module. [Source code](https://github.com/indented-automation/Indented.Net.IP).

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.0 - 2019-05
+
+- Added private functions from the
+[Indented.Net.IP](https://github.com/indented-automation/Indented.Net.IP)
+module by Chris Dent to allow for network range calculations without
+taking a dependency.
+- Added the `Invoke-PingSweep` function.
+
 ## v0.4.2 - 2019-04-27
 
 - Rebuild to update file date stamps

@@ -9,10 +9,10 @@
 @{
 
     # Script module or binary module file associated with this manifest.
-    RootModule        = 'FastPing.psm1'
+    RootModule           = 'FastPing.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.4.2'
+    ModuleVersion        = '0.5.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @(
@@ -21,22 +21,22 @@
     )
 
     # ID used to uniquely identify this module
-    GUID              = '1c5294b7-20cd-4af0-8cd6-497fc318cd87'
+    GUID                 = '1c5294b7-20cd-4af0-8cd6-497fc318cd87'
 
     # Author of this module
-    Author            = 'Andrew Pearce'
+    Author               = 'Andrew Pearce'
 
     # Company or vendor of this module
-    CompanyName       = 'Andrew Pearce'
+    CompanyName          = 'Andrew Pearce'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2019 Andrew Pearce. All rights reserved.'
+    Copyright            = '(c) 2019 Andrew Pearce. All rights reserved.'
 
     # Description of the functionality provided by this module
-    Description       = 'A PowerShell Module for faster pings.'
+    Description          = 'A PowerShell Module for faster pings.'
 
     # Minimum version of the Windows PowerShell engine required by this module
-    PowerShellVersion = '5.1'
+    PowerShellVersion    = '5.1'
 
     # Name of the Windows PowerShell host required by this module
     # PowerShellHostName = ''
@@ -72,19 +72,24 @@
     # NestedModules = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = 'Invoke-FastPing'
+    FunctionsToExport    = @(
+        'Invoke-FastPing',
+        'Invoke-PingSweep'
+    )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-    CmdletsToExport = @()
+    CmdletsToExport      = @()
 
     # Variables to export from this module
-    VariablesToExport = @()
+    VariablesToExport    = @()
 
     # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-    AliasesToExport = @(
+    AliasesToExport      = @(
         'fp',
         'fping',
-        'FastPing'
+        'FastPing',
+        'PingSweep',
+        'psweep'
     )
 
     # DSC resources to export from this module
@@ -97,18 +102,18 @@
     # FileList = @()
 
     # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
-    PrivateData       = @{
+    PrivateData          = @{
 
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @('FastPing', 'Ping', 'PSEdition_Core', 'PSEdition_Desktop', 'Windows', 'Linux', 'macOS')
+            Tags         = @('FastPing', 'Ping', 'PSEdition_Core', 'PSEdition_Desktop', 'Windows', 'Linux', 'macOS')
 
             # A URL to the license for this module.
-            LicenseUri = 'https://github.com/austoonz/FastPing/blob/master/LICENSE'
+            LicenseUri   = 'https://github.com/austoonz/FastPing/blob/master/LICENSE'
 
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/austoonz/FastPing'
+            ProjectUri   = 'https://github.com/austoonz/FastPing'
 
             # A URL to an icon representing this module.
             # IconUri = ''
