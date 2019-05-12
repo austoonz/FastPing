@@ -59,7 +59,7 @@ function Invoke-PingSweep
 
         [Parameter(
             Mandatory = $true,
-            Position = 1,
+            Position = 0,
             ParameterSetName = 'FromIPAndMask')]
         [ValidateScript( {[System.Net.IPAddress]$_} )]
         [String] $IPAddress,
