@@ -1,115 +1,85 @@
 <#
     .SYNOPSIS
-    This script is used in AWS CodeBuild to install the required PowerShell Modules
-    for the build process.
+    This script is used to install the required PowerShell Modules for the build process.
+    It has a dependency on the PowerShell Gallery.
 #>
-$Global:ProgressPreference = 'SilentlyContinue'
+$global:VerbosePreference = 'SilentlyContinue'
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $VerbosePreference = 'SilentlyContinue'
 
-$tempPath = [System.IO.Path]::GetTempPath()
+# Fix for PowerShell Gallery and TLS1.2
+# https://devblogs.microsoft.com/powershell/powershell-gallery-tls-support/
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Install-Module -Name 'PowerShellGet' -MinimumVersion '2.2.4' -SkipPublisherCheck -Force -AllowClobber
+
+# Fix for build environments that include the monolithic AWS Tools for PowerShell
+$installedModules = Get-Module -ListAvailable
+$installedModules.Where({$_.Name -eq 'AWSPowerShell'}) | ForEach-Object {
+    Remove-Item -Path $_.Path -Force -Recurse
+}
+$installedModules.Where({$_.Name -eq 'AWSPowerShell.NetCore'}) | ForEach-Object {
+    Remove-Item -Path $_.Path -Force -Recurse
+}
 
 # List of PowerShell Modules required for the build
-$modulesToInstall = [System.Collections.ArrayList]::new()
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'InvokeBuild'
-    ModuleVersion = '5.5.1'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'Pester'
-    ModuleVersion = '4.7.3'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'platyPS'
-    ModuleVersion = '0.14.0'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
-$null = $modulesToInstall.Add(([PSCustomObject]@{
-    ModuleName    = 'PSScriptAnalyzer'
-    ModuleVersion = '1.18.0'
-    BucketName    = 'austoonz-modules'
-    KeyPrefix     = ''
-}))
-
-if ($PSEdition -eq 'Desktop')
-{
-    'Environment: Windows PowerShell'
-    $moduleInstallPath = [System.IO.Path]::Combine($env:ProgramFiles, 'WindowsPowerShell', 'Modules')
-
-    # Add the AWSPowerShell Module
-    $null = $modulesToInstall.Add(([PSCustomObject]@{
-        ModuleName    = 'AWSPowerShell'
-        ModuleVersion = '3.3.498.0'
-        BucketName    = 'austoonz-modules'
-        KeyPrefix     = ''
-    }))
-}
-else
-{
-    if ($PSVersionTable.Platform -eq 'Win32NT')
-    {
-        'Environment: PowerShell Core on Windows'
-        $moduleInstallPath = [System.IO.Path]::Combine($env:ProgramFiles, 'PowerShell', 'Modules')
-
-        # Add the AWSPowerShell.NetCore Module
-        $null = $modulesToInstall.Add(([PSCustomObject]@{
-            ModuleName    = 'AWSPowerShell.NetCore'
-            ModuleVersion = '3.3.498.0'
-            BucketName    = 'austoonz-modules'
-            KeyPrefix     = ''
-        }))
+$modulesToInstall = @(
+    @{
+        ModuleName    = 'AWS.Tools.S3'
+        ModuleVersion = '4.0.5.0'
     }
-    elseif ($PSVersionTable.Platform -eq 'Unix')
-    {
-        'Environment: Unix'
-        $moduleInstallPath = [System.IO.Path]::Combine('/', 'usr', 'local', 'share', 'powershell', 'Modules')
+    @{
+        ModuleName    = 'InvokeBuild'
+        ModuleVersion = '5.6.0'
+    }
+    @{
+        ModuleName    = 'Pester'
+        ModuleVersion = '4.10.1'
+    }
+    @{
+        ModuleName    = 'platyPS'
+        ModuleVersion = '0.14.0'
+    }
+    @{
+        ModuleName    = 'PSScriptAnalyzer'
+        ModuleVersion = '1.18.3'
+    }
+)
 
-        # Add the AWSPowerShell.NetCore Module
-        $null = $modulesToInstall.Add(([PSCustomObject]@{
-            ModuleName    = 'AWSPowerShell.NetCore'
-            ModuleVersion = '3.3.498.0'
-            BucketName    = 'austoonz-modules'
-            KeyPrefix     = ''
-        }))
-    }
-    else
-    {
-        throw 'Unsupported PowerShell Environment'
-    }
+$installModule = @{
+    Scope              = 'CurrentUser'
+    AllowClobber       = $true
+    Force              = $true
+    SkipPublisherCheck = $true
+    Verbose            = $false
 }
 
-'Installing PowerShell Modules'
+$installedModules = Get-Module -ListAvailable
+
+$installPackageProvider = @{
+    Name           = 'NuGet'
+    MinimumVersion = '2.8.5.201'
+    Scope          = 'CurrentUser'
+    Force          = $true
+    ErrorAction    = 'SilentlyContinue'
+}
+$null = Install-PackageProvider @installPackageProvider
+
 foreach ($module in $modulesToInstall) {
-    '  - {0} {1}' -f $module.ModuleName, $module.ModuleVersion
+    Write-Host ('  - {0} {1}' -f $module.ModuleName, $module.ModuleVersion)
 
-    # Download file from S3
-    $key = '{0}_{1}.zip' -f $module.ModuleName, $module.ModuleVersion
-    $localFile = Join-Path -Path $tempPath -ChildPath $key
-
-    # Download modules from S3 to using the AWS CLI
-    $s3Uri = 's3://{0}/{1}{2}' -f $module.BucketName, $module.KeyPrefix, $key
-    & aws s3 cp $s3Uri $localFile --quiet
-
-    # Ensure the download worked
-    if (-not(Test-Path -Path $localFile))
-    {
-        $message = 'Failed to download {0}' -f $module.ModuleName
-        "  - $message"
-        throw $message
+    if ($module.ModuleName -like 'AWS.Tools.*' -and $installedModules.Where( { $_.Name -like 'AWSPowerShell*' } )) {
+        Write-Host '      A legacy AWS PowerShell module is installed. Skipping...'
+        continue
     }
 
-    # Create module path
-    $modulePath = Join-Path -Path $moduleInstallPath -ChildPath $module.ModuleName
-    $moduleVersionPath = Join-Path -Path $modulePath -ChildPath $module.ModuleVersion
-    $null = New-Item -Path $modulePath -ItemType 'Directory' -Force
-    $null = New-Item -Path $moduleVersionPath -ItemType 'Directory' -Force
+    if ($installedModules.Where( { $_.Name -eq $module.ModuleName -and $_.Version -eq $module.ModuleVersion } )) {
+        Write-Host ('      Already installed. Skipping...' -f $module.ModuleName)
+        continue
+    }
 
-    # Expand downloaded file
-    Expand-Archive -Path $localFile -DestinationPath $moduleVersionPath -Force
+    Install-Module -Name $module.ModuleName -RequiredVersion $module.ModuleVersion @installModule
+    Import-Module -Name $module.ModuleName -Force
 }
+
+Get-Module -ListAvailable | Select-Object -Property Name,Version | Sort-Object -Property Name | Format-Table

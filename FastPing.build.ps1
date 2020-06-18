@@ -35,16 +35,20 @@ task . Clean, ValidateRequirements, Analyze, Test, Build, CreateArtifact
 task TestLocal Clean, Analyze, Test
 
 # Local help file creation process
-task HelpLocal CreateHelp, UpdateCBH
+task HelpLocal Clean, CreateHelp, UpdateCBH
 
 # Pre-build variables to be used by other portions of the script
 Enter-Build {
     Write-Host ''
     Write-Host '  Build Environment: Setting up...' -ForegroundColor Green
 
-    Write-Host '    - Importing the AWS PowerShell Module...' -ForegroundColor Green
+    Write-Host '    - Importing the AWS Tools for PowerShell...' -ForegroundColor Green
     if ($PSEdition -eq 'Desktop') {
-        if (Get-Module -Name 'AWSPowerShell' -ListAvailable)
+        if (Get-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ListAvailable)
+        {
+            Import-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ErrorAction 'Stop'
+        }
+        elseif (Get-Module -Name 'AWSPowerShell' -ListAvailable)
         {
             Import-Module -Name 'AWSPowerShell' -ErrorAction 'Stop'
         }
@@ -54,10 +58,26 @@ Enter-Build {
         }
         else
         {
-            throw 'The "AWSPowerShell" or "AWSPowerShell.NetCore" module must be available for import.'
+            throw 'One of the AWS Tools for PowerShell modules must be available for import.'
         }
     }
-    else { Import-Module -Name 'AWSPowerShell.NetCore' -ErrorAction 'Stop' }
+    else {
+        if (Get-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ListAvailable)
+        {
+            Import-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ErrorAction 'Stop'
+        }
+        elseif (Get-Module -Name 'AWSPowerShell.NetCore' -ListAvailable)
+        {
+            Import-Module -Name 'AWSPowerShell.NetCore' -ErrorAction 'Stop'
+        }
+        else
+        {
+            throw 'One of the AWS Tools for PowerShell modules must be available for import.'
+        }
+    }
+
+    Write-Host '    - Importing the Pester Module...' -ForegroundColor Green
+    Import-Module -Name 'Pester' -ErrorAction 'Stop'
 
     Write-Host '    - Configuring Build Variables...' -ForegroundColor Green
     $script:RepositoryRoot = $BuildRoot
@@ -330,19 +350,29 @@ task CreateMarkdownHelp {
     $null = New-MarkdownHelp @markdownParams
 
     # Replace each missing element we need for a proper generic module page .md file
-    $ModuleDocsPathFileContent = Get-Content -Path $ModuleDocsPath -Raw
-    $ModuleDocsPathFileContent = $ModuleDocsPathFileContent -replace '{{Manually Enter Description Here}}', $script:ModuleDescription
-
     Write-Host '    Updating function documentation definitions...' -ForegroundColor Green
-    $Script:FunctionsToExport | Foreach-Object {
-        Write-Host "      - $_" -ForegroundColor Green
+    $newModuleDocsContent = [System.Text.StringBuilder]::new()
+    $regex = '^### \[(.*)\]\(.*\)'
+    foreach ($line in (Get-Content -Path $ModuleDocsPath)) {
+        if ($line -eq '{{ Fill in the Description }}') { continue }
 
-        $TextToReplace = ('{{Manually Enter {0} Description Here}}' -f $_)
-        $ReplacementText = (Get-Help -Name $_ -Detailed).Synopsis
-        $ModuleDocsPathFileContent = $ModuleDocsPathFileContent -replace $TextToReplace, $ReplacementText
+        if ($line -eq '## Description') {
+            $null = $newModuleDocsContent.AppendLine('## Description')
+            $null = $newModuleDocsContent.AppendLine((Get-Module -Name $ModuleName).Description)
+            continue
+        }
+
+        if ($line -match $regex) {
+            $function = $Matches[1]
+            $null = $newModuleDocsContent.AppendLine($line)
+            $null = $newModuleDocsContent.AppendLine((Get-Help -Name $function -Detailed).Synopsis)
+            continue
+        }
+
+        $null = $newModuleDocsContent.AppendLine($line)
     }
 
-    $ModuleDocsPathFileContent | Out-File -FilePath $ModuleDocsPath -Force -Encoding:utf8
+    $newModuleDocsContent.ToString().TrimEnd() | Out-File -FilePath $ModuleDocsPath -Force -Encoding:utf8
 
     $MissingDocumentation = Select-String -Path (Join-Path -Path $docsPath -ChildPath '\*.md') -Pattern '({{.*}})'
     if ($MissingDocumentation.Count -gt 0)
@@ -476,20 +506,27 @@ task CreateArtifact {
         $platform = 'windows'
     }
 
-    Write-Host ('    Module Name:       {0}' -f $script:ModuleName) -ForegroundColor Green
-    Write-Host ('    Module Version:    {0}' -f $script:ModuleVersion) -ForegroundColor Green
+    Write-Host ('    Module Name:          {0}' -f $script:ModuleName) -ForegroundColor Green
+    Write-Host ('    Module Version:       {0}' -f $script:ModuleVersion) -ForegroundColor Green
     $ymd = [DateTime]::UtcNow.ToString('yyyyMMdd')
     $hms = [DateTime]::UtcNow.ToString('hhmmss')
+
     $script:ZipFileName = '{0}_{1}_{2}.{3}.zip' -f $script:ModuleName, $script:ModuleVersion, $ymd, $hms
     $script:ZipFileNameWithPlatform = '{0}_{1}_{2}.{3}.{4}.zip' -f $script:ModuleName, $script:ModuleVersion, $ymd, $hms, $platform
     $script:ZipFile = Join-Path -Path $archivePath -ChildPath $script:ZipFileName
+
+    $script:DeploymentArtifactFileName = '{0}_{1}.zip' -f $script:ModuleName, $script:ModuleVersion
+    $script:DeploymentArtifact = Join-Path -Path $script:DeploymentArtifactsPath -ChildPath $script:DeploymentArtifactFileName
 
     if ($PSEdition -eq 'Desktop')
     {
         Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
     }
     [System.IO.Compression.ZipFile]::CreateFromDirectory($script:ArtifactsPath, $script:ZipFile)
-    Write-Host "    Archive FileName:  $script:ZipFileName" -ForegroundColor Green
+    Write-Host "    Archive FileName:     $script:ZipFileName" -ForegroundColor Green
+
+    Copy-Item -Path $script:ZipFile -Destination $script:DeploymentArtifact
+    Write-Host '    Deployment Artifact:  Created' -ForegroundColor Green
 
     if ($env:CODEBUILD_WEBHOOK_HEAD_REF -and $env:CODEBUILD_WEBHOOK_TRIGGER)
     {
