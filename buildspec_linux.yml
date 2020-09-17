@@ -4,6 +4,10 @@ phases:
 
   install:
     commands:
+      - dotnet tool install PowerShell --global
+
+  pre_build:
+    commands:
       - pwsh -command './configure_aws_credential.ps1'
       - pwsh -command './install_modules.ps1'
 
