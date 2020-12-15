@@ -69,6 +69,8 @@ Describe -Name 'Invoke-FastPing' -Fixture {
         }
 
         Context -Name 'Accepts an array of HostName values' -Fixture {
+            $onlineHost = 'andrewpearce.io'
+            $offlineHost = 'doesnotexist.andrewpearce.io'
             $assertion = Invoke-FastPing -HostName $onlineHost, $offlineHost
 
             It -Name 'Returns the correct number of objects' -Test {

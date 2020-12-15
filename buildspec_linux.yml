@@ -10,6 +10,7 @@ phases:
   pre_build:
     commands:
       - pwsh -command './configure_aws_credential.ps1'
+      - pwsh -command './install_nuget.ps1'
       - pwsh -command './install_modules.ps1'
 
   build:

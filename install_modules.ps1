@@ -56,15 +56,6 @@ $installModule = @{
 
 $installedModules = Get-Module -ListAvailable
 
-$installPackageProvider = @{
-    Name           = 'NuGet'
-    MinimumVersion = '2.8.5.201'
-    Scope          = 'CurrentUser'
-    Force          = $true
-    ErrorAction    = 'SilentlyContinue'
-}
-$null = Install-PackageProvider @installPackageProvider
-
 foreach ($module in $modulesToInstall) {
     Write-Host ('  - {0} {1}' -f $module.ModuleName, $module.ModuleVersion)
 
