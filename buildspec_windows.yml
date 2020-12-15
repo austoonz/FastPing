@@ -2,11 +2,6 @@ version: 0.2
 
 phases:
 
-  install:
-    commands:
-      - powershell -file '.\install_awstoe.ps1'
-      - awstoe.exe run --documents arn:aws:imagebuilder:us-west-2:aws:component/powershell-windows/7.0.x
-
   pre_build:
     commands:
       - powershell -file '.\configure_aws_credential.ps1'
