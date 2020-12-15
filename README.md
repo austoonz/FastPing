@@ -51,7 +51,7 @@ fp 1.1.1.1
 fp 1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4
 
 # Ping some DNS resolvers using the fp alias using 50 pings per host
-fp 1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4 -PingCount 50
+fp 1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4 -Count 50
 ```
 
 ### Invoke-PingSweep
