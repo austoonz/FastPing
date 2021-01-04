@@ -69,7 +69,9 @@ function Invoke-PingSweep
             Position = 1,
             ParameterSetName = 'FromIPAndMask')]
         [ValidateScript( {[System.Net.IPAddress]$_} )]
-        [String] $SubnetMask
+        [String] $SubnetMask,
+
+        [Switch] $ReturnOnlineOnly
     )
 
     switch ($PSCmdlet.ParameterSetName)
@@ -91,5 +93,13 @@ function Invoke-PingSweep
     }
 
     $networkRange = (GetNetworkRange @getNetworkRange).IPAddressToString
-    Invoke-FastPing -HostName $networkRange
+    if ($ReturnOnlineOnly)
+    {
+        $whereObject = { $_.Online -eq $true }
+        Invoke-FastPing -HostName $networkRange | Where-Object $whereObject | Sort-Object -Property HostNameAsVersion
+    }
+    else
+    {
+        Invoke-FastPing -HostName $networkRange | Sort-Object -Property HostNameAsVersion
+    }
 }

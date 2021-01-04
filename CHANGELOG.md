@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.2 - 2021-01-03
+
+- Invoke-PingSweep will not sort output based on the IP Address
+
+## v0.5.1 - 2019-05-11
+
+- Fixed positional parameter for Invoke-PingSweep
+
 ## v0.5.0 - 2019-05
 
 - Added private functions from the

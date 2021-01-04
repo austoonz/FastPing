@@ -12,9 +12,20 @@ Import-Module $PathToManifest -Force
 
 InModuleScope -ModuleName $ModuleName -ScriptBlock {
     Describe -Name 'Invoke-PingSweep' -Fixture {
-        Context -Name 'Ping Sweet Tests' -Fixture {
+        Context -Name 'Ping Sweep Tests' -Fixture {
             Mock -CommandName 'Invoke-FastPing' -MockWith {
-                $HostName | ForEach-Object { $true }
+                $HostName | ForEach-Object {
+                    if ($_ -eq '1.1.1.15') {
+                        [PSCustomObject]@{
+                            Online = $false
+                        }
+                    }
+                    else {
+                        [PSCustomObject]@{
+                            Online = $true
+                        }
+                    }
+                }
             }
 
             $testCases = @(
@@ -58,6 +69,20 @@ InModuleScope -ModuleName $ModuleName -ScriptBlock {
                 param ($ExpectedCount, $IPAddress, $SubnetMask)
 
                 $assertion = Invoke-PingSweep -IPAddress $IPAddress -SubnetMask $SubnetMask
+                $assertion.Count | Should -BeExactly $ExpectedCount
+            }
+
+            $testCases = @(
+                @{
+                    ExpectedCount = 19
+                    StartIP       = '1.1.1.1'
+                    EndIP         = '1.1.1.20'
+                }
+            )
+            It -Name 'Supports ping sweeps with online only responses' -TestCases $testCases -Test {
+                param ($ExpectedCount, $StartIP, $EndIP)
+
+                $assertion = Invoke-PingSweep -StartIP $StartIP -EndIP $EndIP -ReturnOnlineOnly
                 $assertion.Count | Should -BeExactly $ExpectedCount
             }
         }
