@@ -112,6 +112,9 @@ function Invoke-FastPing
 
         # Used to control the Interval between echo requests
         $loopTimer = [System.Diagnostics.Stopwatch]::new()
+
+        # Regex for identifying an IPv4 address
+        $ipRegex = '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
     }
 
     process
@@ -132,6 +135,22 @@ function Invoke-FastPing
                     if ($pingHash.Keys -notcontains $hn)
                     {
                         $pingHash.Add($hn, [System.Collections.ArrayList]::new())
+
+                        # Attempt to resolve the hostname to prevent issues where the first host fails to resolve
+                        if ($hn -notmatch $ipRegex)
+                        {
+                            try
+                            {
+                                $null = [System.Net.Dns]::Resolve($hn)
+                            }
+                            catch
+                            {
+                                if ($_.Exception.Message -like '*No such host is known*')
+                                {
+                                    Write-Warning "The HostName $hn cannot be resolved."
+                                }
+                            }
+                        }
                     }
 
                     for ($i = 0; $i -lt $RoundtripAveragePingCount; $i++)

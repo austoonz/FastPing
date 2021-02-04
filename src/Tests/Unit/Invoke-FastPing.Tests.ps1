@@ -1,3 +1,4 @@
+$global:WarningPreference = 'SilentlyContinue'
 Set-Location -Path $PSScriptRoot
 
 $ModuleName = 'FastPing'
@@ -100,7 +101,7 @@ Describe -Name 'Invoke-FastPing' -Fixture {
         It -Name 'Returned <Count> results' -TestCases $testCases -Test {
             param ($Count)
 
-            $hostName = 'andrewpearce.io'
+            $hostName = '1.1.1.1'
             $assertion = Invoke-FastPing -HostName $hostName -Count $Count -Interval 10
             $assertion.Count | Should -BeExactly $Count
         }
