@@ -18,19 +18,16 @@
     The copy is due to not wanting to take a dependency, and that module licensed with a permissive license.
     Thanks Chris Dent!
 #>
-function ConvertToDecimalIP
-{
+function ConvertToDecimalIP {
     [CmdletBinding()]
     [OutputType([UInt32])]
-    param
-    (
+    param (
         # An IP Address to convert.
         [Parameter(Mandatory, Position = 1, ValueFromPipeline )]
         [IPAddress] $IPAddress
     )
 
-    process
-    {
+    process {
         [UInt32]([IPAddress]::HostToNetworkOrder($IPAddress.Address) -shr 32 -band [UInt32]::MaxValue)
     }
 }

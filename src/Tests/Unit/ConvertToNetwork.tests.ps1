@@ -10,8 +10,7 @@ $ModuleName = 'FastPing'
 
 $PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
 
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue')
-{
+if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
     Remove-Module -Name $ModuleName -Force
 }
 Import-Module $PathToManifest -Force
@@ -63,12 +62,9 @@ InModuleScope -ModuleName $ModuleName -ScriptBlock {
         It 'Handles all MaskLength values' {
             $HasError = $false
             0..32 | ForEach-Object {
-                try
-                {
+                try {
                     ConvertToNetwork "10.0.0.0/$_"
-                }
-                catch
-                {
+                } catch {
                     $HasError = $true
                 }
 
@@ -89,12 +85,9 @@ InModuleScope -ModuleName $ModuleName -ScriptBlock {
             "255.255.255.254", "255.255.255.255"
             $HasError = $false
             $ValidSubnetMaskValues | ForEach-Object {
-                try
-                {
+                try {
                     ConvertToNetwork '10.0.0.0' $_
-                }
-                catch
-                {
+                } catch {
                     $HasError = $true
                 }
 

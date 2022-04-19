@@ -37,8 +37,7 @@
     1.1.1.2                21   True Success
     1.1.1.1                16   True Success
 #>
-function Invoke-PingSweep
-{
+function Invoke-PingSweep {
     [CmdletBinding(DefaultParameterSetName = 'FromStartAndEnd')]
     [Alias('PingSweep', 'psweep')]
     param
@@ -47,44 +46,41 @@ function Invoke-PingSweep
             Mandatory = $true,
             Position = 0,
             ParameterSetName = 'FromStartAndEnd')]
-        [ValidateScript( {[System.Net.IPAddress]$_} )]
+        [ValidateScript( { [System.Net.IPAddress]$_ } )]
         [String] $StartIP,
 
         [Parameter(
             Mandatory = $true,
             Position = 1,
             ParameterSetName = 'FromStartAndEnd')]
-        [ValidateScript( {[System.Net.IPAddress]$_} )]
+        [ValidateScript( { [System.Net.IPAddress]$_ } )]
         [String] $EndIP,
 
         [Parameter(
             Mandatory = $true,
             Position = 0,
             ParameterSetName = 'FromIPAndMask')]
-        [ValidateScript( {[System.Net.IPAddress]$_} )]
+        [ValidateScript( { [System.Net.IPAddress]$_ } )]
         [String] $IPAddress,
 
         [Parameter(
             Mandatory = $true,
             Position = 1,
             ParameterSetName = 'FromIPAndMask')]
-        [ValidateScript( {[System.Net.IPAddress]$_} )]
+        [ValidateScript( { [System.Net.IPAddress]$_ } )]
         [String] $SubnetMask,
 
         [Switch] $ReturnOnlineOnly
     )
 
-    switch ($PSCmdlet.ParameterSetName)
-    {
-        'FromIPAndMask'
-        {
+    switch ($PSCmdlet.ParameterSetName) {
+        'FromIPAndMask' {
             $getNetworkRange = @{
                 IPAddress  = $IPAddress
                 SubnetMask = $SubnetMask
             }
         }
-        'FromStartAndEnd'
-        {
+        'FromStartAndEnd' {
             $getNetworkRange = @{
                 StartIPAddress = $StartIP
                 EndIPAddress   = $EndIP
@@ -93,13 +89,10 @@ function Invoke-PingSweep
     }
 
     $networkRange = (GetNetworkRange @getNetworkRange).IPAddressToString
-    if ($ReturnOnlineOnly)
-    {
+    if ($ReturnOnlineOnly) {
         $whereObject = { $_.Online -eq $true }
         Invoke-FastPing -HostName $networkRange | Where-Object $whereObject | Sort-Object -Property HostNameAsVersion
-    }
-    else
-    {
+    } else {
         Invoke-FastPing -HostName $networkRange | Sort-Object -Property HostNameAsVersion
     }
 }

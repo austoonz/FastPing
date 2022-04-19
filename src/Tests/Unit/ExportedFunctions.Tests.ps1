@@ -4,8 +4,7 @@ $ModuleName = 'FastPing'
 
 $PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
 
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue')
-{
+if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
     Remove-Module -Name $ModuleName -Force
 }
 Import-Module $PathToManifest -Force
@@ -27,8 +26,7 @@ Describe -Name $ModuleName -Fixture {
         }
 
         Context -Name 'Exported commands' -Fixture {
-            foreach ($command in $moduleExported)
-            {
+            foreach ($command in $moduleExported) {
                 It -Name "Includes the $command in the Module Manifest ExportedFunctions" -Test {
                     $manifestExported -contains $command | Should -BeTrue
                 }
@@ -36,8 +34,7 @@ Describe -Name $ModuleName -Fixture {
         }
 
         Context -Name 'Exported aliases' -Fixture {
-            foreach ($key in $manifestContent.ExportedAliases.GetEnumerator())
-            {
+            foreach ($key in $manifestContent.ExportedAliases.GetEnumerator()) {
                 It -Name ('Exports the Alias {0}' -f $key.Key) -Test {
                     $exportedCommands.ContainsKey($key.Key) | Should -BeTrue
                 }
@@ -46,8 +43,7 @@ Describe -Name $ModuleName -Fixture {
     }
 
     Context -Name 'Command Help' -Fixture {
-        foreach ($command in $moduleExported)
-        {
+        foreach ($command in $moduleExported) {
             Context -Name $command -Fixture {
                 $help = Get-Help -Name $command -Full
 

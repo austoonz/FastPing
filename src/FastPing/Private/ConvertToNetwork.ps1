@@ -14,12 +14,10 @@
     The copy is due to not wanting to take a dependency, and that module licensed with a permissive license.
     Thanks Chris Dent!
 #>
-function ConvertToNetwork
-{
+function ConvertToNetwork {
     [CmdletBinding()]
     [OutputType('Indented.Net.IP.Network')]
-    param
-    (
+    param (
         # Either a literal IP address, a network range expressed as CIDR notation, or an IP address and subnet mask in a string.
         [Parameter(Mandatory = $true, Position = 1)]
         [String] $IPAddress,
@@ -78,23 +76,18 @@ function ConvertToNetwork
         '{0}/{1}' -f $this.IPAddress, $this.MaskLength
     }
 
-    if (-not $psboundparameters.ContainsKey('SubnetMask') -or $SubnetMask -eq '')
-    {
+    if (-not $psboundparameters.ContainsKey('SubnetMask') -or $SubnetMask -eq '') {
         $IPAddress, $SubnetMask = $IPAddress.Split([Char[]]'\/ ', [StringSplitOptions]::RemoveEmptyEntries)
     }
 
     # IPAddress
-    while ($IPAddress.Split('.').Count -lt 4)
-    {
+    while ($IPAddress.Split('.').Count -lt 4) {
         $IPAddress += '.0'
     }
 
-    if ([IPAddress]::TryParse($IPAddress, [Ref]$null))
-    {
+    if ([IPAddress]::TryParse($IPAddress, [Ref]$null)) {
         $network.IPAddress = [IPAddress]$IPAddress
-    }
-    else
-    {
+    } else {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(
             [ArgumentException]'Invalid IP address.',
             'InvalidIPAddress',
@@ -105,23 +98,16 @@ function ConvertToNetwork
     }
 
     # SubnetMask
-    if ($null -eq $SubnetMask -or $SubnetMask -eq '')
-    {
+    if ($null -eq $SubnetMask -or $SubnetMask -eq '') {
         $network.SubnetMask = [IPAddress]$validSubnetMaskValues[32]
         $network.MaskLength = 32
-    }
-    else
-    {
+    } else {
         $maskLength = 0
-        if ([Int32]::TryParse($SubnetMask, [Ref]$maskLength))
-        {
-            if ($MaskLength -ge 0 -and $maskLength -le 32)
-            {
+        if ([Int32]::TryParse($SubnetMask, [Ref]$maskLength)) {
+            if ($MaskLength -ge 0 -and $maskLength -le 32) {
                 $network.SubnetMask = [IPAddress]$validSubnetMaskValues[$maskLength]
                 $network.MaskLength = $maskLength
-            }
-            else
-            {
+            } else {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(
                     [ArgumentException]'Mask length out of range (expecting 0 to 32).',
                     'InvalidMaskLength',
@@ -130,22 +116,16 @@ function ConvertToNetwork
                 )
                 $pscmdlet.ThrowTerminatingError($errorRecord)
             }
-        }
-        else
-        {
-            while ($SubnetMask.Split('.').Count -lt 4)
-            {
+        } else {
+            while ($SubnetMask.Split('.').Count -lt 4) {
                 $SubnetMask += '.0'
             }
             $maskLength = $validSubnetMaskValues.IndexOf($SubnetMask)
 
-            if ($maskLength -ge 0)
-            {
+            if ($maskLength -ge 0) {
                 $Network.SubnetMask = [IPAddress]$SubnetMask
                 $Network.MaskLength = $maskLength
-            }
-            else
-            {
+            } else {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(
                     [ArgumentException]'Invalid subnet mask.',
                     'InvalidSubnetMask',

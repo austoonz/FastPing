@@ -5,8 +5,7 @@ $ModuleName = 'FastPing'
 
 $PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
 
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue')
-{
+if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
     Remove-Module -Name $ModuleName -Force
 }
 Import-Module $PathToManifest -Force
@@ -79,11 +78,11 @@ Describe -Name 'Invoke-FastPing' -Fixture {
             }
 
             It -Name 'Returns the correct number of online objects' -Test {
-                $assertion.Where( {$_.Online -eq $true}).Count | Should -BeExactly 1
+                $assertion.Where( { $_.Online -eq $true }).Count | Should -BeExactly 1
             }
 
             It -Name 'Returns the correct number of offline objects' -Test {
-                $assertion.Where( {$_.Online -ne $true}).Count | Should -BeExactly 1
+                $assertion.Where( { $_.Online -ne $true }).Count | Should -BeExactly 1
             }
         }
     }
@@ -139,7 +138,7 @@ Describe -Name 'Invoke-FastPing' -Fixture {
             }
         )
 
-        It -Name 'Execution time greated than <ExpectedMinimumMilliseconds> when Interval is <Interval>' -TestCases $testCases -Test {
+        It -Name 'Execution time greater than <ExpectedMinimumMilliseconds> when Interval is <Interval>' -TestCases $testCases -Test {
             param ($Count, $Interval, $ExpectedMinimumMilliseconds)
 
             $timer = [System.Diagnostics.StopWatch]::StartNew()

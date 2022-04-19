@@ -23,8 +23,7 @@
     The copy is due to not wanting to take a dependency, and that module licensed with a permissive license.
     Thanks Chris Dent!
 #>
-function GetNetworkRange
-{
+function GetNetworkRange {
     [CmdletBinding(DefaultParameterSetName = 'FromIPAndMask')]
     [OutputType([IPAddress])]
     param (
@@ -49,17 +48,12 @@ function GetNetworkRange
         [IPAddress] $EndIPAddress
     )
 
-    process
-    {
-        if ($pscmdlet.ParameterSetName -eq 'FromIPAndMask')
-        {
-            try
-            {
+    process {
+        if ($pscmdlet.ParameterSetName -eq 'FromIPAndMask') {
+            try {
                 $null = $psboundparameters.Remove('IncludeNetworkAndBroadcast')
                 $network = ConvertToNetwork @psboundparameters
-            }
-            catch
-            {
+            } catch {
                 $pscmdlet.ThrowTerminatingError($_)
             }
 
@@ -69,20 +63,16 @@ function GetNetworkRange
             $startDecimal = $decimalIP -band $decimalMask
             $endDecimal = $decimalIP -bor (-bnot $decimalMask -band [UInt32]::MaxValue)
 
-            if (-not $IncludeNetworkAndBroadcast)
-            {
+            if (-not $IncludeNetworkAndBroadcast) {
                 $startDecimal++
                 $endDecimal--
             }
-        }
-        else
-        {
+        } else {
             $startDecimal = ConvertToDecimalIP -IPAddress $StartIPAddress
             $endDecimal = ConvertToDecimalIP -IPAddress $EndIPAddress
         }
 
-        for ($i = $startDecimal; $i -le $endDecimal; $i++)
-        {
+        for ($i = $startDecimal; $i -le $endDecimal; $i++) {
             [IPAddress]([IPAddress]::NetworkToHostOrder([Int64]$i) -shr 32 -band [UInt32]::MaxValue)
         }
     }

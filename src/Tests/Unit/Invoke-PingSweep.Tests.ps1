@@ -4,8 +4,7 @@ $ModuleName = 'FastPing'
 
 $PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
 
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue')
-{
+if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
     Remove-Module -Name $ModuleName -Force
 }
 Import-Module $PathToManifest -Force
@@ -19,8 +18,7 @@ InModuleScope -ModuleName $ModuleName -ScriptBlock {
                         [PSCustomObject]@{
                             Online = $false
                         }
-                    }
-                    else {
+                    } else {
                         [PSCustomObject]@{
                             Online = $true
                         }

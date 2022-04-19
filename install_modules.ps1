@@ -15,10 +15,10 @@ Install-Module -Name 'PowerShellGet' -MinimumVersion '2.2.4' -SkipPublisherCheck
 
 # Fix for build environments that include the monolithic AWS Tools for PowerShell
 $installedModules = Get-Module -ListAvailable
-$installedModules.Where({$_.Name -eq 'AWSPowerShell'}) | ForEach-Object {
+$installedModules.Where({ $_.Name -eq 'AWSPowerShell' }) | ForEach-Object {
     Remove-Item -Path $_.Path -Force -Recurse
 }
-$installedModules.Where({$_.Name -eq 'AWSPowerShell.NetCore'}) | ForEach-Object {
+$installedModules.Where({ $_.Name -eq 'AWSPowerShell.NetCore' }) | ForEach-Object {
     Remove-Item -Path $_.Path -Force -Recurse
 }
 
@@ -73,4 +73,4 @@ foreach ($module in $modulesToInstall) {
     Import-Module -Name $module.ModuleName -Force
 }
 
-Get-Module -ListAvailable | Select-Object -Property Name,Version | Sort-Object -Property Name | Format-Table
+Get-Module -ListAvailable | Select-Object -Property Name, Version | Sort-Object -Property Name | Format-Table

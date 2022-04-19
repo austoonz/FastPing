@@ -44,36 +44,27 @@ Enter-Build {
 
     Write-Host '    - Importing the AWS Tools for PowerShell...' -ForegroundColor Green
     if ($PSEdition -eq 'Desktop') {
-        if (Get-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ListAvailable)
-        {
-            Import-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ErrorAction 'Stop'
-        }
-        elseif (Get-Module -Name 'AWSPowerShell' -ListAvailable)
-        {
+        if (Get-Module -Name @('AWS.Tools.Common', 'AWS.Tools.S3') -ListAvailable) {
+            Import-Module -Name @('AWS.Tools.Common', 'AWS.Tools.S3') -ErrorAction 'Stop'
+        } elseif (Get-Module -Name 'AWSPowerShell' -ListAvailable) {
             Import-Module -Name 'AWSPowerShell' -ErrorAction 'Stop'
-        }
-        elseif (Get-Module -Name 'AWSPowerShell.NetCore' -ListAvailable)
-        {
+        } elseif (Get-Module -Name 'AWSPowerShell.NetCore' -ListAvailable) {
             Import-Module -Name 'AWSPowerShell.NetCore' -ErrorAction 'Stop'
+        } else {
+            throw 'One of the AWS Tools for PowerShell modules must be available for import.'
         }
-        else
-        {
+    } else {
+        if (Get-Module -Name @('AWS.Tools.Common', 'AWS.Tools.S3') -ListAvailable) {
+            Import-Module -Name @('AWS.Tools.Common', 'AWS.Tools.S3') -ErrorAction 'Stop'
+        } elseif (Get-Module -Name 'AWSPowerShell.NetCore' -ListAvailable) {
+            Import-Module -Name 'AWSPowerShell.NetCore' -ErrorAction 'Stop'
+        } else {
             throw 'One of the AWS Tools for PowerShell modules must be available for import.'
         }
     }
-    else {
-        if (Get-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ListAvailable)
-        {
-            Import-Module -Name @('AWS.Tools.Common','AWS.Tools.S3') -ErrorAction 'Stop'
-        }
-        elseif (Get-Module -Name 'AWSPowerShell.NetCore' -ListAvailable)
-        {
-            Import-Module -Name 'AWSPowerShell.NetCore' -ErrorAction 'Stop'
-        }
-        else
-        {
-            throw 'One of the AWS Tools for PowerShell modules must be available for import.'
-        }
+
+    if ($PSEdition -eq 'Desktop') {
+        Import-Module -Name 'Microsoft.PowerShell.Utility' -MaximumVersion '6.99.99'
     }
 
     Write-Host '    - Importing the Pester Module...' -ForegroundColor Green
@@ -172,13 +163,10 @@ task Analyze {
 
     $scriptAnalyzerResults = Invoke-ScriptAnalyzer @scriptAnalyzerParams
 
-    if ($scriptAnalyzerResults)
-    {
+    if ($scriptAnalyzerResults) {
         $scriptAnalyzerResults | Format-Table
         throw 'One or more PSScriptAnalyzer errors/warnings where found.'
-    }
-    else
-    {
+    } else {
         Write-Host '  PowerShell Module Files: Passed' -ForegroundColor Green
     }
     Write-Host ''
@@ -190,8 +178,7 @@ task AnalyzeTests -After Analyze {
     Write-Host '  Pester Test Files: Analyzing...' -ForegroundColor Green
     Write-Host ''
 
-    if (Test-Path -Path $script:TestsPath)
-    {
+    if (Test-Path -Path $script:TestsPath) {
         $scriptAnalyzerParams = @{
             Path        = $script:TestsPath
             ExcludeRule = @(
@@ -206,8 +193,7 @@ task AnalyzeTests -After Analyze {
 
         $scriptAnalyzerResults = Invoke-ScriptAnalyzer @scriptAnalyzerParams
 
-        if ($scriptAnalyzerResults)
-        {
+        if ($scriptAnalyzerResults) {
             $scriptAnalyzerResults | Format-Table
             throw 'One or more PSScriptAnalyzer errors/warnings where found.'
         }
@@ -225,8 +211,7 @@ task Test {
     $codeCoverageOutputFile = Join-Path -Path $script:RepositoryRoot -ChildPath 'cov.xml'
     $codeCoverageFiles = (Get-ChildItem -Path $script:ModuleSourcePath -Filter '*.ps1' -Recurse).FullName
 
-    if (Test-Path -Path $script:UnitTestsPath)
-    {
+    if (Test-Path -Path $script:UnitTestsPath) {
         Write-Host ''
         Write-Host '  Pester Unit Tests: Invoking...' -ForegroundColor Green
         Write-Host ''
@@ -246,11 +231,9 @@ task Test {
         $testResults = Invoke-Pester @invokePesterParams
 
         # Output the details for each failed test (if running in CodeBuild)
-        if ($env:CODEBUILD_BUILD_ARN)
-        {
+        if ($env:CODEBUILD_BUILD_ARN) {
             $testResults.TestResult | ForEach-Object {
-                if ($_.Result -ne 'Passed')
-                {
+                if ($_.Result -ne 'Passed') {
                     $_
                 }
             }
@@ -260,12 +243,9 @@ task Test {
         assert($numberFails -eq 0) ('Failed "{0}" unit tests.' -f $numberFails)
 
         # Ensure our builds fail until if below a minimum defined code test coverage threshold
-        try
-        {
+        try {
             $coveragePercent = '{0:N2}' -f ($testResults.CodeCoverage.NumberOfCommandsExecuted / $testResults.CodeCoverage.NumberOfCommandsAnalyzed * 100)
-        }
-        catch
-        {
+        } catch {
             $coveragePercent = 0
         }
 
@@ -279,8 +259,7 @@ task Test {
 
     Write-Host ''
 
-    if (Test-Path -Path $script:IntegrationTestsPath)
-    {
+    if (Test-Path -Path $script:IntegrationTestsPath) {
         Write-Host '  Pester Integration Tests: Invoking...' -ForegroundColor Green
         Write-Host ''
 
@@ -296,11 +275,9 @@ task Test {
         $testResults = Invoke-Pester @invokePesterParams
 
         # This will output a nice json for each failed test (if running in CodeBuild)
-        if ($env:CODEBUILD_BUILD_ARN)
-        {
+        if ($env:CODEBUILD_BUILD_ARN) {
             $testResults.TestResult | ForEach-Object {
-                if ($_.Result -ne 'Passed')
-                {
+                if ($_.Result -ne 'Passed') {
                     ConvertTo-Json -InputObject $_ -Compress
                 }
             }
@@ -375,8 +352,7 @@ task CreateMarkdownHelp {
     $newModuleDocsContent.ToString().TrimEnd() | Out-File -FilePath $ModuleDocsPath -Force -Encoding:utf8
 
     $MissingDocumentation = Select-String -Path (Join-Path -Path $docsPath -ChildPath '\*.md') -Pattern '({{.*}})'
-    if ($MissingDocumentation.Count -gt 0)
-    {
+    if ($MissingDocumentation.Count -gt 0) {
         Write-Host -ForegroundColor Yellow ''
         Write-Host -ForegroundColor Yellow '   The documentation that got generated resulted in missing sections which should be filled out.'
         Write-Host -ForegroundColor Yellow '   Please review the following sections in your comment based help, fill out missing information and rerun this build:'
@@ -465,8 +441,7 @@ task Build {
 
     # TO DO: Add support for Requires Statements by finding them and placing them at the top of the newly created .psm1
     $powerShellScripts = Get-ChildItem -Path $script:ModuleSourcePath -Filter '*.ps1' -Recurse
-    foreach ($script in $powerShellScripts)
-    {
+    foreach ($script in $powerShellScripts) {
         $null = $scriptContent.Append((Get-Content -Path $script.FullName -Raw))
         $null = $scriptContent.AppendLine('')
         $null = $scriptContent.AppendLine('')
@@ -490,19 +465,15 @@ task CreateArtifact {
     Write-Host ''
 
     $archivePath = Join-Path -Path $BuildRoot -ChildPath 'Archive'
-    if (Test-Path -Path $archivePath)
-    {
+    if (Test-Path -Path $archivePath) {
         $null = Remove-Item -Path $archivePath -Recurse -Force
     }
 
     $null = New-Item -Path $archivePath -ItemType Directory -Force
 
-    if ($env:CODEBUILD_BUILD_ARN -like '*linux*')
-    {
+    if ($env:CODEBUILD_BUILD_ARN -like '*linux*') {
         $platform = 'linux'
-    }
-    else
-    {
+    } else {
         $platform = 'windows'
     }
 
@@ -518,8 +489,7 @@ task CreateArtifact {
     $script:DeploymentArtifactFileName = '{0}_{1}.zip' -f $script:ModuleName, $script:ModuleVersion
     $script:DeploymentArtifact = Join-Path -Path $script:DeploymentArtifactsPath -ChildPath $script:DeploymentArtifactFileName
 
-    if ($PSEdition -eq 'Desktop')
-    {
+    if ($PSEdition -eq 'Desktop') {
         Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
     }
     [System.IO.Compression.ZipFile]::CreateFromDirectory($script:ArtifactsPath, $script:ZipFile)
@@ -528,15 +498,11 @@ task CreateArtifact {
     Copy-Item -Path $script:ZipFile -Destination $script:DeploymentArtifact
     Write-Host '    Deployment Artifact:  Created' -ForegroundColor Green
 
-    if ($env:CODEBUILD_WEBHOOK_HEAD_REF -and $env:CODEBUILD_WEBHOOK_TRIGGER)
-    {
+    if ($env:CODEBUILD_WEBHOOK_HEAD_REF -and $env:CODEBUILD_WEBHOOK_TRIGGER) {
         Write-Host ('    This was a WebHook triggered build: {0}' -f $env:CODEBUILD_WEBHOOK_TRIGGER)
-        if ($env:CODEBUILD_WEBHOOK_HEAD_REF -eq 'refs/heads/master' -and $env:CODEBUILD_WEBHOOK_TRIGGER -eq 'branch/master')
-        {
+        if ($env:CODEBUILD_WEBHOOK_HEAD_REF -eq 'refs/heads/master' -and $env:CODEBUILD_WEBHOOK_TRIGGER -eq 'branch/master') {
             $s3Bucket = $env:ARTIFACT_BUCKET
-        }
-        else
-        {
+        } else {
             $s3Bucket = $env:DEVELOPMENT_ARTIFACT_BUCKET
         }
 
@@ -545,8 +511,8 @@ task CreateArtifact {
         $s3Key = '{0}/{1}/{2}' -f $script:ModuleName, $branch, $script:ZipFileNameWithPlatform
         $writeS3Object = @{
             BucketName = $s3Bucket
-            Key = $s3Key
-            File = $script:ZipFile
+            Key        = $s3Key
+            File       = $script:ZipFile
         }
         Write-S3Object @writeS3Object
         Write-Host ('    Published artifact to s3://{0}/{1}' -f $s3Bucket, $s3Key)
