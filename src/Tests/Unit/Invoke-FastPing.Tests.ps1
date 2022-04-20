@@ -190,7 +190,7 @@ Describe -Name 'Invoke-FastPing' -Fixture {
             @{
                 Count                       = 3
                 Interval                    = 200
-                ExpectedMinimumMilliseconds = 400
+                ExpectedMinimumMilliseconds = 350
             }
         )
 
