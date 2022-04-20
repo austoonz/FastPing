@@ -80,6 +80,7 @@ Enter-Build {
     $script:ModuleFiles = Join-Path -Path $script:ModuleSourcePath -ChildPath '*'
 
     $script:ModuleManifestFile = Join-Path -Path $script:ModuleSourcePath -ChildPath "$($script:ModuleName).psd1"
+    $script:ModuleFormatFile = Join-Path -Path $script:ModuleSourcePath -ChildPath "$($script:ModuleName).Format.ps1xml"
     Import-Module $script:ModuleManifestFile
 
     $manifestInfo = Import-PowerShellDataFile -Path $script:ModuleManifestFile
@@ -435,6 +436,7 @@ task Build {
 
     Write-Host '    Copying files to artifacts folder' -ForegroundColor Green
     Copy-Item -Path $script:ModuleManifestFile -Destination $script:ArtifactsPath -Recurse -ErrorAction Stop
+    Copy-Item -Path $script:ModuleFormatFile -Destination $script:ArtifactsPath -Recurse -ErrorAction Stop
 
     Write-Host '    Combining scripts into the module root file' -ForegroundColor Green
     $scriptContent = [System.Text.StringBuilder]::new()
