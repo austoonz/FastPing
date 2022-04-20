@@ -1,50 +1,50 @@
-<#
+﻿<#
     .SYNOPSIS
     Performs a series of asynchronous pings against a set of target hosts.
 
     .DESCRIPTION
-    This function uses System.Net.Networkinformation.Ping object to perform
-    a series of asynchronous pings against a set of target hosts.
+    This function uses the System.Net.Networkinformation.Ping object to perform a series of asynchronous pings against a set of target hosts.
+    Each ping result is calculated the specified number of echo requests.
 
     .PARAMETER HostName
     String array of target hosts.
 
     .PARAMETER Count
-    Number of echo requests to send. Aliased with 'n', like ping.exe.
+    Number of ping requests to send. Aliased with 'n', like ping.exe.
 
     .PARAMETER Continuous
     Enables continuous pings against the target hosts. Stop with CTRL+C. Aliases with 't', like ping.exe.
 
     .PARAMETER Timeout
-    Timeout in milliseconds to wait for each reply. Defaults to 2 seconds (5000). Aliased with 'w', like ping.exe.
+    Timeout in milliseconds to wait for each reply. Defaults to 2 seconds (5000 ms). Aliased with 'w', like ping.exe.
 
     Per MSDN Documentation, "When specifying very small numbers for timeout, the Ping reply can be received even if timeout milliseconds have elapsed." (https://msdn.microsoft.com/en-us/library/ms144955.aspx).
 
     .PARAMETER Interval
-    Number of milliseconds between echo requests.
+    Number of milliseconds between ping requests.
 
-    .PARAMETER RoundtripAveragePingCount
-    Number of echo requests to send for calculating the Roundtrip average. Defaults to 4.
+    .PARAMETER EchoRequests
+    Number of echo requests to use for each ping result. Used to generate the calculated output fields. Defaults to 4.
 
     .EXAMPLE
     Invoke-FastPing -HostName 'andrewpearce.io'
 
-    HostName        RoundtripAverage Online
-    --------        ---------------- ------
-    andrewpearce.io               22   True
+    HostName         Online Status     p90   PercentLost
+    --------         ------ ------     ---   -----------
+    andrewpearce.io  True   Success    4     0
 
     .EXAMPLE
     Invoke-FastPing -HostName 'andrewpearce.io','doesnotexist.andrewpearce.io'
 
-    HostName                     RoundtripAverage Online
-    --------                     ---------------- ------
-    doesnotexist.andrewpearce.io                   False
-    andrewpearce.io              22                 True
+    HostName         Online Status     p90   PercentLost
+    --------         ------ ------     ---   -----------
+    andrewpearce.io  True   Success    5     0
+    doesnotexist.an… False  Unknown          100
 
     .EXAMPLE
     Invoke-FastPing -HostName 'andrewpearce.io' -Count 5
 
-    This example pings the host 'andrewpearce.io' five times.
+    This example generates five ping results against the host 'andrewpearce.io'.
 
     .EXAMPLE
     fp andrewpearce.io -n 5
@@ -98,7 +98,8 @@ function Invoke-FastPing {
         [Int] $Interval = 1000,
 
         [ValidateRange(1, [Int]::MaxValue)]
-        [Int] $RoundtripAveragePingCount = 4
+        [Alias('RoundtripAveragePingCount')]
+        [Int] $EchoRequests = 4
     )
 
     begin {
@@ -113,6 +114,12 @@ function Invoke-FastPing {
 
         # Regex for identifying an IPv4 address
         $ipRegex = '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+
+        # Used to shorten line length when filtering results
+        $sortCount = @{
+            Property   = 'Count'
+            Descending = $true
+        }
     }
 
     process {
@@ -141,7 +148,7 @@ function Invoke-FastPing {
                         }
                     }
 
-                    for ($i = 0; $i -lt $RoundtripAveragePingCount; $i++) {
+                    for ($i = 0; $i -lt $EchoRequests; $i++) {
                         $ping = [System.Net.Networkinformation.Ping]::new()
                         $object = @{
                             Host  = $hn
@@ -187,42 +194,51 @@ function Invoke-FastPing {
                 foreach ($key in $pingHash.Keys) {
                     $pingStatus = $pingHash.$key.Status | Select-Object -Unique
 
-                    if ($pingStatus -eq [System.Net.NetworkInformation.IPStatus]::Success) {
-                        $online = $true
-                        $status = [System.Net.NetworkInformation.IPStatus]::Success
-                    } elseif ($pingStatus.Count -eq 1) {
-                        $online = $false
-                        $status = $pingStatus
-                    } else {
-                        $online = $false
-                        $status = [System.Net.NetworkInformation.IPStatus]::Unknown
+                    $unsuccessfulPingStatus = $pingStatus | Where-Object {$_ -ne [System.Net.NetworkInformation.IPStatus]::Success}
+
+                    $sent = 0
+                    $received = 0
+                    $latency = [System.Collections.ArrayList]::new()
+                    foreach ($value in $pingHash.$key) {
+                        $sent++
+                        if (-not([String]::IsNullOrWhiteSpace($value.RoundtripTime)) -and $value.Status -eq [System.Net.NetworkInformation.IPStatus]::Success) {
+                            $received++
+                            [Void]$latency.Add($value.RoundtripTime)
+                        }
                     }
 
-                    if ($online -eq $true) {
-                        $latency = [System.Collections.ArrayList]::new()
-                        foreach ($value in $pingHash.$key) {
-                            if (-not([String]::IsNullOrWhiteSpace($value.RoundtripTime))) {
-                                [Void]$latency.Add($value.RoundtripTime)
-                            }
+                    $sortedLatency = $latency | Sort-Object
+
+                    if ($received -ge 1) {
+                        $online = $true
+                        $status = [System.Net.NetworkInformation.IPStatus]::Success
+
+                        $roundtripAverage = [Math]::Round(($sortedLatency | Measure-Object -Average).Average, 2)
+                    } else {
+                        $online = $false
+
+                        if ($unsuccessfulPingStatus.Count -eq 1) {
+                            $status = $pingStatus
+                        } else {
+                            $groupedPingStatus = $pingHash.$key.Status | Group-Object
+                            $status = ($groupedPingStatus | Sort-Object @sortCount | Select-Object -First 1).Name
                         }
 
-                        $measuredLatency = $latency | Measure-Object -Average -Sum
-                        if ($measuredLatency.Average) {
-                            $roundtripAverage = [Math]::Round($measuredLatency.Average, 0)
-                        } elseif ($measuredLatency.Sum -eq 0) {
-                            $roundtripAverage = 0
-                        } else {
-                            $roundtripAverage = $null
+                        if ([String]::IsNullOrWhiteSpace($status)) {
+                            $status = [System.Net.NetworkInformation.IPStatus]::Unknown
                         }
-                    } else {
+
                         $roundtripAverage = $null
                     }
 
                     [FastPingResponse]::new(
                         $key,
-                        $roundtripAverage,
                         $online,
-                        $status
+                        $status,
+                        $sent,
+                        $received,
+                        $roundtripAverage,
+                        $latency
                     )
                 } # End result processing
 

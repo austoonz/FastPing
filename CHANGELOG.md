@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.0 - 2022-04-18
+
+- Invoke-FastPing updated with additional output properties
+- The parameter `RoundtripAveragePingCount` has been renamed to `EchoRequests` with the original name added as an alias.
+
 ## v0.5.2 - 2021-01-03
 
 - Invoke-PingSweep will not sort output based on the IP Address

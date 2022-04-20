@@ -20,44 +20,100 @@ Describe -Name 'Invoke-FastPing' -Fixture {
         $offlineAssertion = Invoke-FastPing -HostName $offlineHost
 
         Context -Name 'Returned object properties are of the correct type' -Fixture {
-            It -Name 'Has the HostName String property' -Test {
+            It -Name 'Has the HostName property' -Test {
                 $onlineAssertion.HostName | Should -BeOfType 'String'
             }
 
-            It -Name 'Has the RoundtripAverage Boolean property' -Test {
+            It -Name 'Has the RoundtripAverage property' -Test {
                 $onlineAssertion.RoundtripAverage | Should -BeOfType 'Double'
             }
 
-            It -Name 'Has the Online Boolean property' -Test {
+            It -Name 'Has the Online property' -Test {
                 $onlineAssertion.Online | Should -BeOfType 'Boolean'
+            }
+
+            It -Name 'Has the Status property' -Test {
+                $onlineAssertion.Status | Should -BeOfType 'System.Enum'
+            }
+
+            It -Name 'Has the Sent property' -Test {
+                $onlineAssertion.Sent | Should -BeOfType 'Int32'
+            }
+
+            It -Name 'Has the Received property' -Test {
+                $onlineAssertion.Received | Should -BeOfType 'Int32'
+            }
+
+            It -Name 'Has the Lost property' -Test {
+                $onlineAssertion.Lost | Should -BeOfType 'Int32'
+            }
+
+            It -Name 'Has the PercentLost property' -Test {
+                $onlineAssertion.PercentLost | Should -BeOfType 'Int32'
+            }
+
+            It -Name 'Has the Min property' -Test {
+                $onlineAssertion.Min | Should -BeOfType 'Double'
+            }
+
+            It -Name 'Has the Min property' -Test {
+                $onlineAssertion.Min | Should -BeOfType 'Double'
+            }
+
+            It -Name 'Has the p50 property' -Test {
+                $onlineAssertion.p50 | Should -BeOfType 'Double'
+            }
+
+            It -Name 'Has the p90 property' -Test {
+                $onlineAssertion.p90 | Should -BeOfType 'Double'
+            }
+
+            It -Name 'Has the Max property' -Test {
+                $onlineAssertion.Max | Should -BeOfType 'Double'
+            }
+
+            It -Name 'Has the RawValues property' -Test {
+                $onlineAssertion.RawValues.GetType().Name | Should -BeExactly 'Int32[]'
             }
         } # End Correct Properties Tests
 
         Context -Name 'Returns good values for an online host' -Fixture {
-            It -Name 'Has the HostName String property' -Test {
+            It -Name 'Has the HostName property' -Test {
                 $onlineAssertion.HostName | Should -BeExactly $onlineHost
             }
 
-            It -Name 'Has the RoundtripAverage Boolean property' -Test {
+            It -Name 'Has the RoundtripAverage property' -Test {
                 $onlineAssertion.RoundtripAverage | Should -BeGreaterThan 0
             }
 
-            It -Name 'Has the Online Boolean property' -Test {
+            It -Name 'Has the Online property' -Test {
                 $onlineAssertion.Online | Should -BeTrue
+            }
+
+            It -Name 'Has the Status property' -Test {
+                $onlineAssertion.Status | Should -BeExactly 'Success'
             }
         } # End Online Host Tests
 
         Context -Name 'Returns good values for an offline host' -Fixture {
-            It -Name 'Has the HostName String property' -Test {
+            It -Name 'Has the HostName property' -Test {
                 $offlineAssertion.HostName | Should -BeExactly $offlineHost
             }
 
-            It -Name 'Has the RoundtripAverage Boolean property' -Test {
+            It -Name 'Has the RoundtripAverage property' -Test {
                 $offlineAssertion.RoundtripAverage | Should -BeNullOrEmpty
             }
 
-            It -Name 'Has the Online Boolean property' -Test {
+            It -Name 'Has the Online property' -Test {
                 $offlineAssertion.Online | Should -BeFalse
+            }
+
+            It -Name 'Has the Status property' -Test {
+                $offlineAssertion.Status | Should -BeExactly 'Unknown'
+            }
+
+            It -Name 'Has the PercentLost property' -Test {
+                $offlineAssertion.PercentLost | Should -BeExactly 100
             }
         } # End Offline Host Tests
 

@@ -12,7 +12,7 @@
     RootModule           = 'FastPing.psm1'
 
     # Version number of this module.
-    ModuleVersion        = '0.5.3'
+    ModuleVersion        = '0.6.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @(
@@ -66,7 +66,7 @@
     # TypesToProcess = @()
 
     # Format files (.ps1xml) to be loaded when importing this module
-    # FormatsToProcess = @()
+    FormatsToProcess = @('FastPing.Format.ps1xml')
 
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     # NestedModules = @()
