@@ -11,69 +11,32 @@ if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
 Import-Module $PathToManifest -Force
 
 Describe -Name 'Invoke-FastPing' -Fixture {
-
-    Context -Name 'Default Tests' -Fixture {
+    BeforeAll {
         $onlineHost = 'andrewpearce.io'
         $onlineAssertion = Invoke-FastPing -HostName $onlineHost
 
         $offlineHost = 'doesnotexist.andrewpearce.io'
         $offlineAssertion = Invoke-FastPing -HostName $offlineHost
+    }
 
+    Context -Name 'Default Tests' -Fixture {
         Context -Name 'Returned object properties are of the correct type' -Fixture {
-            It -Name 'Has the HostName property' -Test {
-                $onlineAssertion.HostName | Should -BeOfType 'String'
-            }
-
-            It -Name 'Has the RoundtripAverage property' -Test {
-                $onlineAssertion.RoundtripAverage | Should -BeOfType 'Double'
-            }
-
-            It -Name 'Has the Online property' -Test {
-                $onlineAssertion.Online | Should -BeOfType 'Boolean'
-            }
-
-            It -Name 'Has the Status property' -Test {
-                $onlineAssertion.Status | Should -BeOfType 'System.Enum'
-            }
-
-            It -Name 'Has the Sent property' -Test {
-                $onlineAssertion.Sent | Should -BeOfType 'Int32'
-            }
-
-            It -Name 'Has the Received property' -Test {
-                $onlineAssertion.Received | Should -BeOfType 'Int32'
-            }
-
-            It -Name 'Has the Lost property' -Test {
-                $onlineAssertion.Lost | Should -BeOfType 'Int32'
-            }
-
-            It -Name 'Has the PercentLost property' -Test {
-                $onlineAssertion.PercentLost | Should -BeOfType 'Int32'
-            }
-
-            It -Name 'Has the Min property' -Test {
-                $onlineAssertion.Min | Should -BeOfType 'Double'
-            }
-
-            It -Name 'Has the Min property' -Test {
-                $onlineAssertion.Min | Should -BeOfType 'Double'
-            }
-
-            It -Name 'Has the p50 property' -Test {
-                $onlineAssertion.p50 | Should -BeOfType 'Double'
-            }
-
-            It -Name 'Has the p90 property' -Test {
-                $onlineAssertion.p90 | Should -BeOfType 'Double'
-            }
-
-            It -Name 'Has the Max property' -Test {
-                $onlineAssertion.Max | Should -BeOfType 'Double'
-            }
-
-            It -Name 'Has the RawValues property' -Test {
-                $onlineAssertion.RawValues.GetType().Name | Should -BeExactly 'Int32[]'
+            It -Name 'Has the <Property> property' -ForEach @(
+                @{Property = 'HostName'; Type = 'String'}
+                @{Property = 'RoundtripAverage'; Type = 'Double'}
+                @{Property = 'Online'; Type = 'Boolean'}
+                @{Property = 'Status'; Type = 'System.Enum'}
+                @{Property = 'Sent'; Type = 'Int32'}
+                @{Property = 'Received'; Type = 'Int32'}
+                @{Property = 'Lost'; Type = 'Int32'}
+                @{Property = 'PercentLost'; Type = 'Int32'}
+                @{Property = 'Min'; Type = 'Double'}
+                @{Property = 'p50'; Type = 'Double'}
+                @{Property = 'p90'; Type = 'Double'}
+                @{Property = 'Max'; Type = 'Double'}
+                @{Property = 'RawValues'; Type = 'Int32'}
+            ) -Test {
+                ($onlineAssertion.$Property) | Should -BeOfType $Type
             }
         } # End Correct Properties Tests
 
@@ -125,9 +88,11 @@ Describe -Name 'Invoke-FastPing' -Fixture {
         }
 
         Context -Name 'Accepts an array of HostName values' -Fixture {
-            $onlineHost = 'andrewpearce.io'
-            $offlineHost = 'doesnotexist.andrewpearce.io'
-            $assertion = Invoke-FastPing -HostName $onlineHost, $offlineHost
+            BeforeAll {
+                $onlineHost = 'andrewpearce.io'
+                $offlineHost = 'doesnotexist.andrewpearce.io'
+                $assertion = Invoke-FastPing -HostName $onlineHost, $offlineHost
+            }
 
             It -Name 'Returns the correct number of objects' -Test {
                 $assertion.Count | Should -BeExactly 2

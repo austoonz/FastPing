@@ -103,23 +103,12 @@ function Invoke-FastPing {
     )
 
     begin {
-        # The time used for the ping async wait() method
-        $asyncWaitMilliseconds = 500
-
-        # Used to control the Count of echo requests
         $loopCounter = 0
-
-        # Used to control the Interval between echo requests
         $loopTimer = [System.Diagnostics.Stopwatch]::new()
-
-        # Regex for identifying an IPv4 address
         $ipRegex = '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-
-        # Used to shorten line length when filtering results
-        $sortCount = @{
-            Property   = 'Count'
-            Descending = $true
-        }
+        
+        # Cache DNS resolutions across iterations
+        $dnsCache = @{}
     }
 
     process {
@@ -127,108 +116,113 @@ function Invoke-FastPing {
             while ($true) {
                 $loopTimer.Restart()
 
-                # Objects to hold items as we process pings
-                $queue = [System.Collections.Queue]::new()
+                # Pre-allocate collections with known capacity
+                $totalPings = $HostName.Count * $EchoRequests
+                $pingObjects = [System.Collections.Generic.List[object]]::new($totalPings)
                 $pingHash = @{}
 
-                # Start an asynchronous ping against each computer
-                foreach ($hn in $HostName) {
-                    if ($pingHash.Keys -notcontains $hn) {
-                        $pingHash.Add($hn, [System.Collections.ArrayList]::new())
+                # Start async pings for each host
+                foreach ($hostEntry in $HostName) {
+                    if (-not $pingHash.ContainsKey($hostEntry)) {
+                        $pingHash[$hostEntry] = [System.Collections.Generic.List[hashtable]]::new($EchoRequests)
 
-                        # Attempt to resolve the hostname to prevent issues where the first host fails to resolve
-                        if ($hn -notmatch $ipRegex) {
+                        # DNS resolution with caching
+                        if ($hostEntry -notmatch $ipRegex -and -not $dnsCache.ContainsKey($hostEntry)) {
                             try {
-                                $null = [System.Net.Dns]::Resolve($hn)
+                                $null = [System.Net.Dns]::GetHostEntry($hostEntry)
+                                $dnsCache[$hostEntry] = $true
                             } catch {
-                                if ($_.Exception.Message -like '*No such host is known*') {
-                                    Write-Warning "The HostName $hn cannot be resolved."
+                                $dnsCache[$hostEntry] = $false
+                                if ($_.Exception.InnerException.Message -like '*No such host is known*' -or 
+                                    $_.Exception.Message -like '*No such host is known*') {
+                                    Write-Warning -Message "The HostName $hostEntry cannot be resolved."
                                 }
                             }
                         }
                     }
 
                     for ($i = 0; $i -lt $EchoRequests; $i++) {
-                        $ping = [System.Net.Networkinformation.Ping]::new()
-                        $object = @{
-                            Host  = $hn
+                        $ping = [System.Net.NetworkInformation.Ping]::new()
+                        $null = $pingObjects.Add(@{
+                            Host  = $hostEntry
                             Ping  = $ping
-                            Async = $ping.SendPingAsync($hn, $Timeout)
-                        }
-                        $queue.Enqueue($object)
+                            Task  = $ping.SendPingAsync($hostEntry, $Timeout)
+                        })
                     }
                 }
 
-                # Process the asynchronous pings
-                while ($queue.Count -gt 0) {
-                    $object = $queue.Dequeue()
+                # Wait for all tasks using WaitAll instead of polling
+                $tasks = [System.Threading.Tasks.Task[]]($pingObjects | ForEach-Object { $_.Task })
+                
+                try {
+                    $null = [System.Threading.Tasks.Task]::WaitAll($tasks, ($Timeout + 1000))
+                } catch [System.AggregateException] {
+                    # Expected for failed pings - continue processing
+                }
 
+                # Process completed results
+                foreach ($pingObj in $pingObjects) {
                     try {
-                        # Wait for completion
-                        if ($object.Async.Wait($asyncWaitMilliseconds) -eq $true) {
-                            [Void]$pingHash[$object.Host].Add(@{
-                                    Host          = $object.Host
-                                    RoundtripTime = $object.Async.Result.RoundtripTime
-                                    Status        = $object.Async.Result.Status
-                                })
-                            continue
+                        $task = $pingObj.Task
+                        $hostKey = $pingObj.Host
+
+                        if ($task.IsCompleted -and -not $task.IsFaulted) {
+                            $result = $task.Result
+                            $null = $pingHash[$hostKey].Add(@{
+                                RoundtripTime = $result.RoundtripTime
+                                Status        = $result.Status
+                            })
+                        } else {
+                            $null = $pingHash[$hostKey].Add(@{
+                                RoundtripTime = 0
+                                Status        = [System.Net.NetworkInformation.IPStatus]::Unknown
+                            })
                         }
                     } catch {
-                        # The Wait() method can throw an exception if the host does not exist.
-                        if ($object.Async.IsCompleted -eq $true) {
-                            [Void]$pingHash[$object.Host].Add(@{
-                                    Host          = $object.Host
-                                    RoundtripTime = $object.Async.Result.RoundtripTime
-                                    Status        = $object.Async.Result.Status
-                                })
-                            continue
-                        } else {
-                            Write-Warning -Message ('Unhandled exception: {0}' -f $_.Exception.Message)
+                        $null = $pingHash[$pingObj.Host].Add(@{
+                            RoundtripTime = 0
+                            Status        = [System.Net.NetworkInformation.IPStatus]::Unknown
+                        })
+                    } finally {
+                        # Dispose ping object
+                        if ($null -ne $pingObj.Ping) {
+                            $pingObj.Ping.Dispose()
                         }
                     }
-
-                    $queue.Enqueue($object)
                 }
 
-                # Using the ping results in pingHash, calculate the average RoundtripTime
+                # Calculate results for each host
                 foreach ($key in $pingHash.Keys) {
-                    $pingStatus = $pingHash.$key.Status | Select-Object -Unique
-
-                    $unsuccessfulPingStatus = $pingStatus | Where-Object {$_ -ne [System.Net.NetworkInformation.IPStatus]::Success}
-
-                    $sent = 0
+                    $hostResults = $pingHash[$key]
+                    $sent = $hostResults.Count
                     $received = 0
-                    $latency = [System.Collections.ArrayList]::new()
-                    foreach ($value in $pingHash.$key) {
-                        $sent++
-                        if (-not([String]::IsNullOrWhiteSpace($value.RoundtripTime)) -and $value.Status -eq [System.Net.NetworkInformation.IPStatus]::Success) {
+                    $latency = [System.Collections.Generic.List[int]]::new($sent)
+
+                    foreach ($result in $hostResults) {
+                        if ($result.Status -eq [System.Net.NetworkInformation.IPStatus]::Success) {
                             $received++
-                            [Void]$latency.Add($value.RoundtripTime)
+                            $null = $latency.Add($result.RoundtripTime)
                         }
                     }
-
-                    $sortedLatency = $latency | Sort-Object
 
                     if ($received -ge 1) {
                         $online = $true
                         $status = [System.Net.NetworkInformation.IPStatus]::Success
-
+                        $sortedLatency = $latency | Sort-Object
                         $roundtripAverage = [Math]::Round(($sortedLatency | Measure-Object -Average).Average, 2)
                     } else {
                         $online = $false
+                        $roundtripAverage = $null
 
-                        if ($unsuccessfulPingStatus.Count -eq 1) {
-                            $status = $pingStatus
+                        # Determine most common failure status
+                        $statusGroups = $hostResults | Group-Object -Property Status
+                        $mostCommon = $statusGroups | Sort-Object -Property Count -Descending | Select-Object -First 1
+                        
+                        if ($null -ne $mostCommon -and -not [string]::IsNullOrWhiteSpace($mostCommon.Name)) {
+                            $status = $mostCommon.Name
                         } else {
-                            $groupedPingStatus = $pingHash.$key.Status | Group-Object
-                            $status = ($groupedPingStatus | Sort-Object @sortCount | Select-Object -First 1).Name
-                        }
-
-                        if ([String]::IsNullOrWhiteSpace($status)) {
                             $status = [System.Net.NetworkInformation.IPStatus]::Unknown
                         }
-
-                        $roundtripAverage = $null
                     }
 
                     [FastPingResponse]::new(
@@ -238,14 +232,13 @@ function Invoke-FastPing {
                         $sent,
                         $received,
                         $roundtripAverage,
-                        $latency
+                        $latency.ToArray()
                     )
-                } # End result processing
+                }
 
-                # Increment the loop counter
                 $loopCounter++
 
-                if ($loopCounter -lt $Count -or $Continuous -eq $true) {
+                if ($loopCounter -lt $Count -or $Continuous) {
                     $timeToSleep = $Interval - $loopTimer.Elapsed.TotalMilliseconds
                     if ($timeToSleep -gt 0) {
                         Start-Sleep -Milliseconds $timeToSleep
@@ -259,6 +252,5 @@ function Invoke-FastPing {
         } finally {
             $loopTimer.Stop()
         }
-
-    } # End Process
+    }
 }
