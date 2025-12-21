@@ -413,7 +413,7 @@ function Invoke-PowerShellTest {
         $enableCoverage = $true
     }
     
-    $testPath = [System.IO.Path]::Combine($Config.TestsPath, 'Unit')
+    $testPath = $Config.TestsPath
     
     if ($Artifact) {
         $platformName = switch ($platformInfo.Platform) {

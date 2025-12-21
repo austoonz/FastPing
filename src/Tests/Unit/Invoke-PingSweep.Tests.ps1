@@ -2,31 +2,38 @@ $ModuleName = 'FastPing'
 
 InModuleScope -ModuleName $ModuleName -ScriptBlock {
     Describe -Name 'Invoke-PingSweep' -Fixture {
-        Context -Name 'Ping Sweep Tests' -Fixture {
+        BeforeAll {
             Mock -CommandName 'Invoke-FastPing' -MockWith {
                 $HostName | ForEach-Object {
-                    if ($_ -eq '1.1.1.15') {
+                    if ($_ -eq '203.0.113.15') {
                         [PSCustomObject]@{
+                            HostName = $_
                             Online = $false
+                            HostNameAsVersion = $_
                         }
                     } else {
                         [PSCustomObject]@{
+                            HostName = $_
                             Online = $true
+                            HostNameAsVersion = $_
                         }
                     }
                 }
             }
+        }
+        
+        Context -Name 'Ping Sweep Tests' -Fixture {
 
             $testCases = @(
                 @{
                     ExpectedCount = 2
-                    StartIP       = '1.1.1.1'
-                    EndIP         = '1.1.1.2'
+                    StartIP       = '203.0.113.1'
+                    EndIP         = '203.0.113.2'
                 }
                 @{
                     ExpectedCount = 10
-                    StartIP       = '1.1.1.1'
-                    EndIP         = '1.1.1.10'
+                    StartIP       = '203.0.113.1'
+                    EndIP         = '203.0.113.10'
                 }
             )
             It -Name 'Supports ping sweeps: Count <ExpectedCount>' -TestCases $testCases -Test {
@@ -39,18 +46,18 @@ InModuleScope -ModuleName $ModuleName -ScriptBlock {
             $testCases = @(
                 @{
                     ExpectedCount = 254
-                    IPAddress     = '192.168.1.0'
+                    IPAddress     = '198.51.100.0'
                     SubnetMask    = '255.255.255.0'
                 }
                 @{
                     ExpectedCount = 14
-                    IPAddress     = '192.168.1.0'
+                    IPAddress     = '198.51.100.0'
                     SubnetMask    = '255.255.255.240'
                 }
 
                 @{
                     ExpectedCount = 2
-                    IPAddress     = '192.168.1.0'
+                    IPAddress     = '198.51.100.0'
                     SubnetMask    = '255.255.255.252'
                 }
             )
@@ -64,8 +71,8 @@ InModuleScope -ModuleName $ModuleName -ScriptBlock {
             $testCases = @(
                 @{
                     ExpectedCount = 10
-                    StartIP       = '1.1.1.1'
-                    EndIP         = '1.1.1.10'
+                    StartIP       = '203.0.113.1'
+                    EndIP         = '203.0.113.10'
                 }
             )
             It -Name 'Supports ping sweeps with online only responses' -TestCases $testCases -Test {

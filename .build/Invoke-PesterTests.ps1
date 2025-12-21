@@ -6,7 +6,7 @@ param(
     [string]$ManifestPath,
     
     [Parameter(Mandatory)]
-    [string]$TestPath,
+    $TestPath,
     
     [Parameter(Mandatory)]
     [string]$TestReportPath,
@@ -45,7 +45,13 @@ Write-Host "Module root:     $($module.ModuleBase)" -ForegroundColor Cyan
 Write-Host "Module manifest: $ManifestPath" -ForegroundColor Cyan
 
 $config = New-PesterConfiguration
-$config.Run.Path = $TestPath
+
+# Handle both single path (string) and multiple paths (array)
+if ($TestPath -is [array]) {
+    $config.Run.Path = $TestPath
+} else {
+    $config.Run.Path = $TestPath
+}
 $config.Run.PassThru = $true
 $config.TestResult.Enabled = $true
 $config.TestResult.OutputPath = $TestReportPath
