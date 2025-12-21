@@ -1,0 +1,54 @@
+name: Publish to PowerShell Gallery
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: publish-powershell-gallery
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish module
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          sparse-checkout: |
+            .build/Invoke-PublishModule.ps1
+            src
+          sparse-checkout-cone-mode: false
+
+      - name: Get module name
+        id: module
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem -Path src -Filter '*.psd1' -Recurse | Select-Object -First 1
+          $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($manifest.Name)
+          echo "name=$moduleName" >> $env:GITHUB_OUTPUT
+
+      - name: Download module artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e
+        with:
+          name: ${{ steps.module.outputs.name }}-Module
+          path: Artifacts/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: ./.build/Invoke-PublishModule.ps1 -ModuleName ${{ steps.module.outputs.name }} -ArtifactPath Artifacts

@@ -1,0 +1,375 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force full build (ignore hash)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: windows-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request_target'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      
+      - name: Get module name
+        id: module
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem -Path src -Filter '*.psd1' -Recurse | Select-Object -First 1
+          $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($manifest.Name)
+          echo "name=$moduleName" >> $env:GITHUB_OUTPUT
+          Write-Host "Detected module: $moduleName"
+      
+      - name: Download previous content hash
+        uses: dawidd6/action-download-artifact@20319c5641d495c8a52e688b7dc5fada6c3a9fbc
+        continue-on-error: true
+        with:
+          name: content-hash
+          path: .build/
+          workflow: ci.yml
+          branch: ${{ github.event_name == 'pull_request_target' && github.base_ref || github.ref_name }}
+          if_no_artifact_found: ignore
+      
+      - name: Clear hash if force build requested
+        if: github.event.inputs.force == 'true'
+        shell: pwsh
+        run: |
+          $hashFile = '.build/content-hash.txt'
+          if (Test-Path $hashFile) {
+            Remove-Item $hashFile -Force
+            Write-Host 'Force build requested - cleared previous hash'
+          }
+      
+      - name: Cache PowerShell modules
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: |
+            ~/Documents/PowerShell/Modules
+            ~/Documents/WindowsPowerShell/Modules
+          key: ${{ runner.os }}-psmodules-${{ hashFiles('install_modules.ps1') }}
+      
+      - name: Install NuGet provider
+        shell: pwsh
+        run: ./install_nuget.ps1
+      
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: ./install_modules.ps1
+      
+      - name: Build and test
+        shell: powershell
+        run: ./build.ps1 -Analyze -Build -Test -Artifact -Package
+      
+      - name: Upload content hash
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: content-hash
+          path: .build/content-hash.txt
+          retention-days: 90
+          overwrite: true
+      
+      - name: Upload module artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.module.outputs.name }}-Module
+          path: Artifacts/
+          retention-days: 7
+  
+  test-windows-x64:
+    name: Test on Windows x64
+    runs-on: windows-latest
+    needs: build-and-test
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request_target'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      
+      - name: Get module name
+        id: module
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem -Path src -Filter '*.psd1' -Recurse | Select-Object -First 1
+          $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($manifest.Name)
+          echo "name=$moduleName" >> $env:GITHUB_OUTPUT
+      
+      - name: Download module artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e
+        with:
+          name: ${{ steps.module.outputs.name }}-Module
+          path: Artifacts/
+      
+      - name: Cache PowerShell modules
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: |
+            ~/Documents/PowerShell/Modules
+            ~/Documents/WindowsPowerShell/Modules
+          key: ${{ runner.os }}-psmodules-${{ hashFiles('install_modules.ps1') }}
+      
+      - name: Install NuGet provider
+        shell: pwsh
+        run: ./install_nuget.ps1
+      
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: ./install_modules.ps1
+      
+      - name: Run tests on Windows PowerShell 5.1
+        shell: powershell
+        run: ./build.ps1 -Test -Artifact
+      
+      - name: Run tests on PowerShell Core
+        shell: pwsh
+        run: ./build.ps1 -Test -Artifact
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: test-results-windows-x64
+          path: test-results-windows-x64-*.xml
+          retention-days: 90
+          if-no-files-found: warn
+  
+  test-linux-x64:
+    name: Test on Linux x64
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request_target'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      
+      - name: Get module name
+        id: module
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem -Path src -Filter '*.psd1' -Recurse | Select-Object -First 1
+          $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($manifest.Name)
+          echo "name=$moduleName" >> $env:GITHUB_OUTPUT
+      
+      - name: Download module artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e
+        with:
+          name: ${{ steps.module.outputs.name }}-Module
+          path: Artifacts/
+      
+      - name: Cache PowerShell modules
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.local/share/powershell/Modules
+          key: ${{ runner.os }}-psmodules-${{ hashFiles('install_modules.ps1') }}
+      
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: ./install_modules.ps1
+      
+      - name: Run tests
+        shell: pwsh
+        run: ./build.ps1 -Test -Artifact
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: test-results-linux-x64
+          path: test-results-linux-x64.xml
+          retention-days: 90
+          if-no-files-found: warn
+  
+  test-macos-x64:
+    name: Test on macOS x64 (Intel)
+    runs-on: macos-15-intel
+    needs: build-and-test
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request_target'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      
+      - name: Get module name
+        id: module
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem -Path src -Filter '*.psd1' -Recurse | Select-Object -First 1
+          $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($manifest.Name)
+          echo "name=$moduleName" >> $env:GITHUB_OUTPUT
+      
+      - name: Download module artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e
+        with:
+          name: ${{ steps.module.outputs.name }}-Module
+          path: Artifacts/
+      
+      - name: Cache PowerShell modules
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.local/share/powershell/Modules
+          key: ${{ runner.os }}-psmodules-${{ hashFiles('install_modules.ps1') }}
+      
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: ./install_modules.ps1
+      
+      - name: Run tests
+        shell: pwsh
+        run: ./build.ps1 -Test -Artifact
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: test-results-macos-x64
+          path: test-results-macos-x64.xml
+          retention-days: 90
+          if-no-files-found: warn
+  
+  test-macos-arm64:
+    name: Test on macOS Apple Silicon
+    runs-on: macos-latest
+    needs: build-and-test
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request_target'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      
+      - name: Get module name
+        id: module
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem -Path src -Filter '*.psd1' -Recurse | Select-Object -First 1
+          $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($manifest.Name)
+          echo "name=$moduleName" >> $env:GITHUB_OUTPUT
+      
+      - name: Download module artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e
+        with:
+          name: ${{ steps.module.outputs.name }}-Module
+          path: Artifacts/
+      
+      - name: Cache PowerShell modules
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.local/share/powershell/Modules
+          key: ${{ runner.os }}-psmodules-${{ hashFiles('install_modules.ps1') }}
+      
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: ./install_modules.ps1
+      
+      - name: Run tests
+        shell: pwsh
+        run: ./build.ps1 -Test -Artifact
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: test-results-macos-arm64
+          path: test-results-macos-arm64.xml
+          retention-days: 90
+          if-no-files-found: warn
+  
+  publish-results:
+    name: Publish test results
+    runs-on: ubuntu-latest
+    needs: [test-windows-x64, test-linux-x64, test-macos-x64, test-macos-arm64]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      
+      - name: Download all test results
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e
+        with:
+          pattern: test-results-*
+          path: test-results/
+      
+      - name: Publish test results
+        uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226
+        if: always()
+        with:
+          name: Test Results (All Platforms)
+          path: test-results/**/*.xml
+          reporter: java-junit
+      
+      - name: Summary
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tests completed on all platforms:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Windows x64 (PowerShell 5.1 + Core)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Linux x64" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ macOS x64 (Intel)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ macOS arm64 (Apple Silicon)" >> $GITHUB_STEP_SUMMARY
+  
+  create-release-package:
+    name: Create release package
+    runs-on: ubuntu-latest
+    needs: [test-windows-x64, test-linux-x64, test-macos-x64, test-macos-arm64]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      
+      - name: Get module name
+        id: module
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem -Path src -Filter '*.psd1' -Recurse | Select-Object -First 1
+          $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($manifest.Name)
+          echo "name=$moduleName" >> $env:GITHUB_OUTPUT
+      
+      - name: Download module artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e
+        with:
+          name: ${{ steps.module.outputs.name }}-Module
+          path: Artifacts/
+      
+      - name: Get module version
+        id: version
+        shell: pwsh
+        run: |
+          $moduleName = '${{ steps.module.outputs.name }}'
+          $manifest = Import-PowerShellDataFile -Path "Artifacts/$moduleName.psd1"
+          $version = $manifest.ModuleVersion
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "Module version: $version"
+      
+      - name: Create ZIP package
+        run: |
+          cd Artifacts
+          zip -r ../${{ steps.module.outputs.name }}-${{ steps.version.outputs.version }}.zip .
+          cd ..
+      
+      - name: Upload release package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.module.outputs.name }}-Release-Package
+          path: ${{ steps.module.outputs.name }}-${{ steps.version.outputs.version }}.zip
+          retention-days: 90
