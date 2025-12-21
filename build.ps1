@@ -352,6 +352,13 @@ function Invoke-PowerShellBuild {
     Write-Host '  Copying module manifest...' -ForegroundColor Gray
     [System.IO.File]::Copy($manifestSource, $manifestDest, $true)
     
+    Write-Host '  Copying format files...' -ForegroundColor Gray
+    $formatFiles = [System.IO.Directory]::GetFiles($sourcePath, '*.ps1xml', [System.IO.SearchOption]::TopDirectoryOnly)
+    foreach ($formatFile in $formatFiles) {
+        $formatDest = [System.IO.Path]::Combine($artifactsPath, [System.IO.Path]::GetFileName($formatFile))
+        [System.IO.File]::Copy($formatFile, $formatDest, $true)
+    }
+    
     Write-Host '  Combining PowerShell scripts...' -ForegroundColor Gray
     $ps1Files = [System.IO.Directory]::GetFiles($sourcePath, '*.ps1', [System.IO.SearchOption]::AllDirectories)
     
