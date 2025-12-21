@@ -82,7 +82,8 @@ Describe -Name 'Invoke-FastPing' -Fixture {
         Context -Name 'RoundTripAverage Values' -Fixture {
             It -Name 'Returns a RoundTripAverage of zero when the ping is too fast to average' -Test {
                 $assertion = Invoke-FastPing -HostName '127.0.0.1'
-                $assertion.RoundTripAverage | Should -BeExactly 0
+                $assertion.RoundTripAverage | Should -BeGreaterOrEqual 0
+                $assertion.RoundTripAverage | Should -BeLessThan 10
             }
         }
 

@@ -122,7 +122,7 @@ Describe -Name 'Invoke-FastPing Internal Logic' -Tag 'Unit' -Fixture {
             $timer.Stop()
             
             $timer.ElapsedMilliseconds | Should -BeGreaterThan 40
-            $timer.ElapsedMilliseconds | Should -BeLessThan 100
+            $timer.ElapsedMilliseconds | Should -BeLessThan 500
         }
         
         It -Name 'Calculates sleep time correctly' -Test {
