@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.7.0 - 2025-12-21
+
+### Changed
+- **Invoke-FastPing performance significantly improved** through internal refactoring
+- DNS resolution now cached across ping iterations for faster repeated hostname lookups
+- Memory usage optimized with better resource management and disposal
+
+### Added
+- Comprehensive performance benchmark test suite for measuring ping operation speed
+- Enhanced unit test coverage with logic isolation tests using mocked network calls
+- Improved test organization separating unit, integration, and performance test categories
+
+### Technical Details
+- Replaced internal queue implementation with pre-allocated collections for better performance
+- Implemented `Task.WaitAll()` for improved async coordination instead of polling
+- Added proper disposal patterns to prevent memory leaks during ping operations
+
 ## v0.6.0 - 2022-04-18
 
 - Invoke-FastPing updated with additional output properties

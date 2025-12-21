@@ -362,10 +362,21 @@ function Invoke-PowerShellBuild {
     }
     
     Write-Host '  Combining PowerShell scripts...' -ForegroundColor Gray
-    $ps1Files = [System.IO.Directory]::GetFiles($sourcePath, '*.ps1', [System.IO.SearchOption]::AllDirectories)
-    
     $sb = [System.Text.StringBuilder]::new()
+    
+    $classesFile = [System.IO.Path]::Combine($sourcePath, 'Classes.ps1')
+    if ([System.IO.File]::Exists($classesFile)) {
+        $content = [System.IO.File]::ReadAllText($classesFile, [System.Text.Encoding]::UTF8)
+        [void]$sb.AppendLine($content)
+        [void]$sb.AppendLine()
+    }
+    
+    $ps1Files = [System.IO.Directory]::GetFiles($sourcePath, '*.ps1', [System.IO.SearchOption]::AllDirectories)
     foreach ($file in $ps1Files) {
+        $fileName = [System.IO.Path]::GetFileName($file)
+        if ($fileName -eq 'Classes.ps1') {
+            continue
+        }
         $content = [System.IO.File]::ReadAllText($file, [System.Text.Encoding]::UTF8)
         [void]$sb.AppendLine($content)
         [void]$sb.AppendLine()
