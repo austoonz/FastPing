@@ -2,16 +2,8 @@
 # These tests mock network calls to test logic in isolation
 
 $global:WarningPreference = 'SilentlyContinue'
-Set-Location -Path $PSScriptRoot
 
 $ModuleName = 'FastPing'
-
-$PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
-
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
-    Remove-Module -Name $ModuleName -Force
-}
-Import-Module $PathToManifest -Force
 
 Describe -Name 'Invoke-FastPing Internal Logic' -Tag 'Unit' -Fixture {
 

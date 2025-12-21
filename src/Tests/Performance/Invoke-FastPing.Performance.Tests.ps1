@@ -3,16 +3,8 @@
 # NOT part of automated CI/CD pipeline
 
 $global:WarningPreference = 'SilentlyContinue'
-Set-Location -Path $PSScriptRoot
 
 $ModuleName = 'FastPing'
-
-$PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
-
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
-    Remove-Module -Name $ModuleName -Force
-}
-Import-Module $PathToManifest -Force
 
 Describe -Name 'Invoke-FastPing Performance Benchmarks' -Tag 'Performance', 'Integration' -Fixture {
 

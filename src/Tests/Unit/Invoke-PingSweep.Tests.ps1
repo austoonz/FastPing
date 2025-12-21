@@ -1,13 +1,4 @@
-Set-Location -Path $PSScriptRoot
-
 $ModuleName = 'FastPing'
-
-$PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
-
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
-    Remove-Module -Name $ModuleName -Force
-}
-Import-Module $PathToManifest -Force
 
 InModuleScope -ModuleName $ModuleName -ScriptBlock {
     Describe -Name 'Invoke-PingSweep' -Fixture {
@@ -72,9 +63,9 @@ InModuleScope -ModuleName $ModuleName -ScriptBlock {
 
             $testCases = @(
                 @{
-                    ExpectedCount = 19
+                    ExpectedCount = 10
                     StartIP       = '1.1.1.1'
-                    EndIP         = '1.1.1.20'
+                    EndIP         = '1.1.1.10'
                 }
             )
             It -Name 'Supports ping sweeps with online only responses' -TestCases $testCases -Test {

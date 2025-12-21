@@ -4,16 +4,7 @@
     The copy is due to not wanting to take a dependency, and that module licensed with a permissive license.
     Thanks Chris Dent!
 #>
-Set-Location -Path $PSScriptRoot
-
 $ModuleName = 'FastPing'
-
-$PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
-
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
-    Remove-Module -Name $ModuleName -Force
-}
-Import-Module $PathToManifest -Force
 
 InModuleScope -ModuleName $ModuleName -ScriptBlock {
     Describe 'ConvertToDecimalIP' {

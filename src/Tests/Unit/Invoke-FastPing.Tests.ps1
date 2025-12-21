@@ -1,14 +1,6 @@
 $global:WarningPreference = 'SilentlyContinue'
-Set-Location -Path $PSScriptRoot
 
 $ModuleName = 'FastPing'
-
-$PathToManifest = [System.IO.Path]::Combine('..', '..', $ModuleName, "$ModuleName.psd1")
-
-if (Get-Module -Name $ModuleName -ErrorAction 'SilentlyContinue') {
-    Remove-Module -Name $ModuleName -Force
-}
-Import-Module $PathToManifest -Force
 
 Describe -Name 'Invoke-FastPing' -Fixture {
     BeforeAll {
