@@ -3,4 +3,12 @@ Artifacts
 DeploymentArtifacts
 .DS_Store
 .vscode
-cov.xml
+coverage.xml
+/test*.xml
+
+# MkDocs
+site/
+.cache/
+
+# CI build hash
+.build/content-hash.txt
