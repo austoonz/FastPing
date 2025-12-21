@@ -1,0 +1,14 @@
+site_name: FastPing - PowerShell Module for fast ping operations
+site_description: FastPing is a PowerShell module that can help speed up ping requests against a fleet of target hosts.
+site_url: https://austoonz.github.io/FastPing/
+repo_url: https://github.com/austoonz/FastPing
+site_author: Andrew Pearce
+edit_uri: edit/main/docs/
+theme: readthedocs
+copyright: "FastPing is licensed under the <a href='https://github.com/austoonz/FastPing/blob/main/LICENSE'>MIT license"
+nav:
+  - Home: index.md
+  - Change Log: CHANGELOG.md
+  - Functions:
+    - Invoke-FastPing: functions/Invoke-FastPing.md
+    - Invoke-PingSweep: functions/Invoke-PingSweep.md

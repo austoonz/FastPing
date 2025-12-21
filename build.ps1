@@ -352,6 +352,15 @@ function Invoke-PowerShellBuild {
     Write-Host '  Copying module manifest...' -ForegroundColor Gray
     [System.IO.File]::Copy($manifestSource, $manifestDest, $true)
     
+    # Copy format files if they exist
+    $formatFiles = [System.IO.Directory]::GetFiles($sourcePath, '*.ps1xml', [System.IO.SearchOption]::TopDirectoryOnly)
+    foreach ($formatFile in $formatFiles) {
+        $formatFileName = [System.IO.Path]::GetFileName($formatFile)
+        $formatDest = [System.IO.Path]::Combine($artifactsPath, $formatFileName)
+        Write-Host "  Copying format file: $formatFileName" -ForegroundColor Gray
+        [System.IO.File]::Copy($formatFile, $formatDest, $true)
+    }
+    
     Write-Host '  Combining PowerShell scripts...' -ForegroundColor Gray
     $ps1Files = [System.IO.Directory]::GetFiles($sourcePath, '*.ps1', [System.IO.SearchOption]::AllDirectories)
     
@@ -720,7 +729,7 @@ function Invoke-PowerShellDocs {
     }
     
     try {
-        & $scriptPath -ModulePath $Config.ArtifactsPath -OutputPath $Config.FunctionsDocsPath -ErrorAction Stop
+        & $scriptPath -ModuleName $Config.ModuleName -ModulePath $Config.ArtifactsPath -OutputPath $Config.FunctionsDocsPath -ErrorAction Stop
         return @{ Success = $true }
     }
     catch {

@@ -94,7 +94,7 @@ jobs:
       - name: Generate function documentation
         if: steps.check_docs.outputs.ready == 'true'
         shell: pwsh
-        run: ./.build/Invoke-DocumentationGeneration.ps1 -Force
+        run: ./.build/Invoke-DocumentationGeneration.ps1 -ModuleName ${{ steps.module.outputs.name }} -Force
       
       - name: Setup Python
         if: steps.check_docs.outputs.ready == 'true'
