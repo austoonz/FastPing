@@ -157,7 +157,7 @@ function Invoke-FastPing {
                 try {
                     $null = [System.Threading.Tasks.Task]::WaitAll($tasks, ($Timeout + 1000))
                 } catch [System.AggregateException] {
-                    # Expected for failed pings - continue processing
+                    $null = $_.Exception
                 }
 
                 # Process completed results
