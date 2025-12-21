@@ -231,6 +231,8 @@ function Get-BuildContentHash {
         @{ Path = @('src', $ModuleName, 'Public'); Pattern = '*.ps1' },
         @{ Path = @('src', $ModuleName, 'Private'); Pattern = '*.ps1' },
         @{ Path = @('src', 'Tests', 'Unit'); Pattern = '*.ps1' },
+        @{ Path = @('src', 'Tests', 'Integration'); Pattern = '*.ps1' },
+        @{ Path = @('src', 'Tests', 'Performance'); Pattern = '*.ps1' },
         @{ Path = @('src', 'Tests', 'Build'); Pattern = '*.ps1' },
         @{ Path = @('.build'); Pattern = '*.ps1' }
     )

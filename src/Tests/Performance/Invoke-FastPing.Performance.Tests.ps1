@@ -10,9 +10,8 @@ Describe -Name 'Invoke-FastPing Performance Benchmarks' -Tag 'Performance', 'Int
 
     BeforeAll {
         Write-Host ''
-        Write-Host '⚠️  WARNING: These tests make REAL network calls' -ForegroundColor Yellow
-        Write-Host '   They are slow and require internet connectivity' -ForegroundColor Yellow
-        Write-Host '   Run manually with: Invoke-Pester -Tag Performance' -ForegroundColor Yellow
+        Write-Host 'WARNING: These tests make REAL network calls. They are slow and require internet connectivity' -ForegroundColor Yellow
+        Write-Host 'Run manually with: Invoke-Pester -Tag Performance' -ForegroundColor Yellow
         Write-Host ''
     }
 
